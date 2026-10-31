@@ -813,7 +813,7 @@
         <p class="hint">Anything the app doesn't know for a plane (like where it's going) is left out.</p>
         <div class="row"><button id="voiceTest">▶ Test the voice</button><button id="sayReset">Reset to default</button></div>
         <p class="hint" id="voiceStatus" style="margin-top:6px"></p>
-        <p class="hint" style="margin-top:8px"><b>Kokoro</b> voices sound the most natural and are made right on this PC: the first one you pick downloads once (about 90 to 300 MB) and the browser keeps it. The browser's own voices are instant; Edge's "Natural" ones only work when Microsoft's speech service can be reached. Each browser remembers its own choice.</p>
+        <p class="hint" style="margin-top:8px"><b>Kokoro</b> voices sound the most natural and are made right on this PC. Heart is the default: it downloads by itself the first time the app opens (about 90 to 300 MB, once) and the browser keeps it. The browser's own voices are instant; Edge's "Natural" ones only work when Microsoft's speech service can be reached. Each browser remembers its own choice.</p>
       </div>
       <p class="hint">To turn the alerts on or off, use <b>Overhead Plane Alert</b> and <b>🔔 Sound</b> at the top of the page.</p>
     </section>
@@ -2223,7 +2223,7 @@ const TIKTOK_LIKE = /jenny|aria|ava|emma|michelle|samantha|zira/i;
 // Edge's "Natural" voices sound best. Other online voices (like Chrome's "Google US English") sometimes stay silent
 // without any error, so voices built into Windows come next, and a retry always uses one of those.
 // The voice chosen in Settings > Alerts ('' = automatic: the upbeat pick below), and whether to make it upbeat.
-let voiceName = load('skyVoiceName', ''), voiceUpbeat = load('skyVoiceUpbeat', true);
+let voiceName = load('skyVoiceName', 'kokoro:af_heart'), voiceUpbeat = load('skyVoiceUpbeat', true);
 function pickVoice(builtInOnly) {
   // voices that failed in this browser are skipped (failedVoices, below)
   const all = speechSynthesis.getVoices().filter(v => !failedVoices.has(v.name)), chosen = voiceName && all.find(v => v.name === voiceName);
@@ -2383,8 +2383,8 @@ async function announce(a) {
   }
   say(text);
 }
-// get Kokoro ready shortly after the page opens, so the first real announcement isn't slow
-setTimeout(() => { if (kokoroVoice() && soundOn) kokoroMake(kokoroVoice(), 'Ready.').catch(() => {}); }, 8000);
+// download the Kokoro voice as soon as the page opens (even with sound off), so it is already cached and ready for the first announcement
+setTimeout(() => { if (kokoroVoice()) loadKokoro().then(() => soundOn && kokoroMake(kokoroVoice(), 'Ready.')).catch(() => {}); }, 2000);
 
 // What the voice says, written by the user in Settings > Alerts (each browser keeps its own).
 // {words} are filled in for each plane; any the app doesn't know are dropped along with their comma.
