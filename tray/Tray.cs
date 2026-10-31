@@ -1,8 +1,8 @@
-// System tray icon for Krabbz9999 - Look A Plane!.
+// System tray icon for KrabbzDev's Porch Radar.
 // Node.js can't show a tray icon, so the app carries this tiny helper inside its .exe and starts it.
 // Usage: Krabbz9999-FlightTracker-Tray.exe <port> <app process id> <tooltip>
 //        Krabbz9999-FlightTracker-Tray.exe --email <file> <subject>   (the app's "Email debug log": a new email with the file attached)
-// Left-click or "Open Look A Plane!" opens the dashboard; "Check for updates" asks the app to look for a newer build
+// Left-click or "Open Porch Radar" opens the dashboard; "Check for updates" asks the app to look for a newer build
 // on GitHub and install it; "Email debug log..." asks the app to gather its log and email it; "Quit" asks the app
 // to save and exit.
 // The helper closes itself as soon as the app's process is gone (including when an update restarts it).
@@ -32,13 +32,13 @@ static class Tray
         if (args.Length < 2 || !int.TryParse(args[0], out port) || !int.TryParse(args[1], out appPid)) return;
         url = "http://localhost:" + port + "/";
         api = "http://127.0.0.1:" + port + "/"; // the app only listens on this PC's IPv4 loopback
-        string tip = args.Length > 2 ? args[2] : "Krabbz9999 - Look A Plane!";
+        string tip = args.Length > 2 ? args[2] : "KrabbzDev's Porch Radar";
 
         Process app;
         try { app = Process.GetProcessById(appPid); } catch { return; } // app already gone
 
         var menu = new ContextMenuStrip();
-        menu.Items.Add("Open Look A Plane!", null, (s, e) => Open()).Font = new Font(menu.Font, FontStyle.Bold);
+        menu.Items.Add("Open Porch Radar", null, (s, e) => Open()).Font = new Font(menu.Font, FontStyle.Bold);
         var settingsMenu = new ToolStripMenuItem("Settings");
         settingsMenu.DropDownItems.Add("(loading…)");
         settingsMenu.DropDownOpening += (s, e) => TraySettings.Build(settingsMenu, api);
@@ -101,7 +101,7 @@ static class Tray
     static void CheckForUpdates()
     {
         var ui = SynchronizationContext.Current;
-        Action<string, ToolTipIcon> tell = (msg, kind) => ui.Post(_ => icon.ShowBalloonTip(5000, "Look A Plane! updates", msg, kind), null);
+        Action<string, ToolTipIcon> tell = (msg, kind) => ui.Post(_ => icon.ShowBalloonTip(5000, "Porch Radar updates", msg, kind), null);
         tell("Checking for updates…", ToolTipIcon.Info);
         ThreadPool.QueueUserWorkItem(_ =>
         {

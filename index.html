@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Krabbz9999 - Look A Plane!</title>
+<title>KrabbzDev's Porch Radar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -648,7 +648,7 @@
 <header>
   <div class="brand">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
-    Krabbz9999 - Look A Plane!
+    KrabbzDev's Porch Radar
   </div>
   <span class="live" id="live"><i></i><span id="liveTxt">Connecting…</span></span>
   <span class="lan-addr" id="lanAddr" hidden title="Network access is on (Settings → Network): other devices on your network can open the dashboard at these addresses"></span>
@@ -912,7 +912,7 @@
     <section data-pane="news" hidden>
       <div class="place">
         <h4>🆕 What's new</h4>
-        <p class="hint">The changes in the latest versions of Look A Plane!</p>
+        <p class="hint">The changes in the latest versions of Porch Radar</p>
         <div class="row"><button type="button" id="newsBtn">Show what's new</button></div>
         <div id="newsList" class="hint"></div>
       </div>
@@ -928,7 +928,7 @@
     <section data-pane="credits" hidden>
       <div class="place">
         <h4>🙏 Credits</h4>
-        <p class="hint">Look A Plane! is built on free data and tools from many people and organizations: adsb.fi, Planespotters, Airport-Data.com, OurAirports, the FAA, NOAA, OpenStreetMap, Wikipedia, AISStream, Esri, Leaflet, Kokoro and more.</p>
+        <p class="hint">Porch Radar is built on free data and tools from many people and organizations: adsb.fi, Planespotters, Airport-Data.com, OurAirports, the FAA, NOAA, OpenStreetMap, Wikipedia, AISStream, Esri, Leaflet, Kokoro and more.</p>
         <div class="row"><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1#data-sources-and-credits" target="_blank" rel="noopener">📜 See all the credits on GitHub ↗</a><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1/wiki/Data-Sources-and-Privacy" target="_blank" rel="noopener">Data sources and privacy ↗</a></div>
       </div>
     </section>
@@ -946,7 +946,7 @@
     </section>
   </div>
 
-  <div class="set-foot"><a class="coffee" href="https://buymeacoffee.com/krabbzdev" target="_blank" rel="noopener" title="If Look A Plane! makes you smile, you can buy KrabbzDev a coffee">☕ Buy me a coffee</a><button id="cancelHome">Cancel</button><button id="saveHome" class="primary">Save</button></div>
+  <div class="set-foot"><a class="coffee" href="https://buymeacoffee.com/krabbzdev" target="_blank" rel="noopener" title="If Porch Radar makes you smile, you can buy KrabbzDev a coffee">☕ Buy me a coffee</a><button id="cancelHome">Cancel</button><button id="saveHome" class="primary">Save</button></div>
 </dialog>
 
 <button id="soundLock" type="button" hidden>🔇 Sound is off until you click this page. <b>Click here to turn on the overhead chime and voice</b></button>
@@ -961,7 +961,7 @@
   <textarea id="fbText" rows="5" maxlength="3000" placeholder="Tell us what you clicked and what happened…"></textarea>
   <div class="fb-foot"><span class="fb-note" id="fbNote">We include the app's build and which options are on, not your address.</span><button type="button" id="fbCopy" class="fb-secondary">Copy</button><button type="button" id="fbSend" class="fb-send">Send</button></div>
 </section>
-<div id="version"><span id="verText" title="Version and build number"></span><a id="verCode" target="_blank" rel="noopener" hidden></a> · <a href="#" id="verUpdate" title="Check GitHub for a newer build and install it">⬆ Update now</a> · <a href="https://flighttracker.loves3d.com" target="_blank" rel="noopener" title="The Look A Plane! website">Website ↗</a> · <a id="verWiki" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1/wiki" target="_blank" rel="noopener" title="How every feature works">Wiki ↗</a> · <a id="verRepo" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1" target="_blank" rel="noopener" title="Source code and releases on GitHub">GitHub ↗</a></div>
+<div id="version"><span id="verText" title="Version and build number"></span><a id="verCode" target="_blank" rel="noopener" hidden></a> · <a href="#" id="verUpdate" title="Check GitHub for a newer build and install it">⬆ Update now</a> · <a href="https://flighttracker.loves3d.com" target="_blank" rel="noopener" title="The Porch Radar website">Website ↗</a> · <a id="verWiki" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1/wiki" target="_blank" rel="noopener" title="How every feature works">Wiki ↗</a> · <a id="verRepo" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1" target="_blank" rel="noopener" title="Source code and releases on GitHub">GitHub ↗</a></div>
 
 <dialog id="axDlg" class="ax-dlg">
   <div class="ax-bar">
@@ -2577,7 +2577,7 @@ function shareCaption({ a, reg }) {
   const ids = [a.flight, reg && reg !== a.flight ? reg : ''].filter(Boolean).join(' / ');
   const lead = a.dist != null && a.dist < 1 ? '✈ Overhead now' : '✈ Flying near home';
   const model = a.lat != null ? modelOf(a) : 'an aircraft';
-  return `${lead}: ${model}${ids ? ` (${ids})` : ''}${airlineOf(a) ? ` · ${airlineOf(a)}` : ''}${route}. Tracked with Krabbz9999 - Look A Plane! 🛩️ flighttracker.loves3d.com`;
+  return `${lead}: ${model}${ids ? ` (${ids})` : ''}${airlineOf(a) ? ` · ${airlineOf(a)}` : ''}${route}. Tracked with KrabbzDev's Porch Radar 🛩️ flighttracker.loves3d.com`;
 }
 // capture phase so a Share click never also selects a card underneath
 document.addEventListener('click', async e => {
@@ -3304,7 +3304,7 @@ $('aisClear').onclick = () => { $('aisIn').value = ''; aisClear = !!cfg.aisKeySe
 var fbKind = 'bug';
 const FB_TEXT = {
   bug: { label: 'What went wrong? What did you expect?', hint: "Tell us what you clicked and what happened…", tag: '[Bug] ', labels: 'bug' },
-  idea: { label: "What would you like Look A Plane! to do?", hint: "Describe your idea, and why it would help…", tag: '[Idea] ', labels: 'enhancement' },
+  idea: { label: "What would you like Porch Radar to do?", hint: "Describe your idea, and why it would help…", tag: '[Idea] ', labels: 'enhancement' },
 };
 function setFbKind(kind) {
   fbKind = kind;
@@ -3317,7 +3317,7 @@ async function fbReport() {
   const text = $('fbText').value.trim(), v = await fetch('/api/version').then(r => r.json()).catch(() => ({}));
   const on = [...document.querySelectorAll('#layersMenu input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset.pref || c.id);
   const facts = [
-    `Look A Plane! build ${v.build ?? '?'}${v.commit ? ' (' + v.commit + ')' : ''}${v.date ? ' · ' + v.date : ''}${v.exe === false ? ' · from source' : ''}`,
+    `Porch Radar build ${v.build ?? '?'}${v.commit ? ' (' + v.commit + ')' : ''}${v.date ? ' · ' + v.date : ''}${v.exe === false ? ' · from source' : ''}`,
     `Browser: ${navigator.userAgent}`,
     `Window: ${innerWidth}×${innerHeight} · page size ${Math.round(uiScale * 100)}%`,
     `Map: ${$('mapStyleSel').value}${$('chartSel').value ? ' + ' + $('chartSel').value + ' chart' : ''} · ${nautical ? 'pilot units' : 'miles and mph'}`,

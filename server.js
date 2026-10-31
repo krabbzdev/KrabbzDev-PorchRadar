@@ -1,4 +1,4 @@
-// Krabbz9999 - Look A Plane! - tiny local server for the dashboard.
+// KrabbzDev's Porch Radar - tiny local server for the dashboard.
 // Serves index.html and proxies the public adsb.fi feed plus aircraft photo/info lookups
 // so the browser never hits CORS problems.
 //
@@ -1057,7 +1057,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/debuglog') {
       // ?email=1 (POST): open an email with it attached; otherwise download it
       if (req.method === 'POST') return send(res, 200, JSON.stringify({ ok: true, file: emailDebugReport() }));
-      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': `attachment; filename="LookAPlane-debug-log.txt"` });
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': `attachment; filename="PorchRadar-debug-log.txt"` });
       return res.end(debugReport());
     }
     if (url.pathname === '/api/prefs') {
@@ -1737,7 +1737,7 @@ function startTray(tries = 0) {
     return console.log('Tray icon unavailable: ' + e.message);
   }
   try {
-    require('child_process').spawn(TRAY_EXE, [String(PORT), String(process.pid), `Krabbz9999 - Look A Plane! (build ${VERSION.build})`],
+    require('child_process').spawn(TRAY_EXE, [String(PORT), String(process.pid), `KrabbzDev's Porch Radar (build ${VERSION.build})`],
       { detached: true, stdio: 'ignore', cwd: APP_DIR }).unref();
   } catch (e) { console.log('Tray icon unavailable: ' + e.message); }
 }
@@ -1746,7 +1746,7 @@ function startTray(tries = 0) {
 function debugReport() {
   const os = require('os'), yes = v => v ? 'yes' : 'no';
   const lines = [
-    `Krabbz9999 - Look A Plane! ${VERSION.version} build ${VERSION.build} (${VERSION.date || 'from source'})`,
+    `KrabbzDev's Porch Radar ${VERSION.version} build ${VERSION.build} (${VERSION.date || 'from source'})`,
     `Windows ${os.release()} ${os.arch()} · Node ${process.versions.node} · ${sea ? 'installed .exe' : 'running from source'} · up ${Math.round(process.uptime() / 60)} min`,
     `Saved ${new Date().toString()}`,
     '',
@@ -1763,7 +1763,7 @@ function debugReport() {
 }
 function writeDebugReport() {
   const d = new Date(), stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
-  const file = path.join(require('os').tmpdir(), `LookAPlane-debug-log-${stamp}.txt`);
+  const file = path.join(require('os').tmpdir(), `PorchRadar-debug-log-${stamp}.txt`);
   fs.writeFileSync(file, debugReport());
   return file;
 }
@@ -1771,7 +1771,7 @@ function writeDebugReport() {
 // BusyLightz app); if it can't (no helper, or a mail app like the new Outlook that doesn't take attachments that way)
 // it shows the file in its folder and starts an email to drag it into.
 function emailDebugReport() {
-  const file = writeDebugReport(), subject = `Look A Plane! debug log (build ${VERSION.build})`;
+  const file = writeDebugReport(), subject = `Porch Radar debug log (build ${VERSION.build})`;
   const cp = require('child_process');
   if (process.platform === 'win32' && fs.existsSync(TRAY_EXE)) {
     cp.spawn(TRAY_EXE, ['--email', file, subject], { detached: true, stdio: 'ignore' }).unref();
@@ -1879,6 +1879,6 @@ function startedUp() {
     try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1)); } catch (e) {}
   }
   aisConnect();
-  console.log(`Krabbz9999 - Look A Plane! v${VERSION.version} build ${VERSION.build} running at http://localhost:${PORT}${settings.lanAccess ? ' and ' + lanUrls().join(', ') : ''}`);
+  console.log(`KrabbzDev's Porch Radar v${VERSION.version} build ${VERSION.build} running at http://localhost:${PORT}${settings.lanAccess ? ' and ' + lanUrls().join(', ') : ''}`);
   if (sea) { console.log('To stop it, close this window or right-click the plane icon in the system tray and choose Quit.'); openBrowser(); startTray(); }
 }

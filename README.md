@@ -1,4 +1,4 @@
-# Krabbz9999 - Look A Plane!
+# KrabbzDev's Porch Radar
 
 A live dashboard of the planes flying over your house. Runs on any Windows PC as a single `.exe`,
 shows a map of everything nearby, and takes over the screen with a close-up and a spoken alert
@@ -30,7 +30,7 @@ opens an email with the app's log attached.
 Got an idea or found a bug? Use **Send feedback** in Settings → Help (or the tray icon's right-click menu): it opens a
 pre-filled issue on this project's GitHub page (nothing is sent until you press Submit there), or you can copy the text.
 
-If Look A Plane! makes you smile, you can [buy me a coffee](https://buymeacoffee.com/krabbzdev).
+If Porch Radar makes you smile, you can [buy me a coffee](https://buymeacoffee.com/krabbzdev).
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/krabbzdev)
 

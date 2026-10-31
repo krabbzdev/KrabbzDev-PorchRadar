@@ -61,4 +61,4 @@ jobs:
           $build = if ($v.patch) { "$($v.build).$($v.patch)" } else { "$($v.build)" }
           if (-not $notes.Trim()) { $notes = "Build $build" }
           # the installer is what people download; the plain .exe is what installed copies update themselves from
-          gh release create $env:GITHUB_REF_NAME dist\Krabbz9999-FlightTracker-Setup.exe Krabbz9999-FlightTracker.exe --title "Krabbz9999 - Look A Plane! $($v.version) build $build" --notes "$notes"
+          gh release create $env:GITHUB_REF_NAME dist\Krabbz9999-FlightTracker-Setup.exe Krabbz9999-FlightTracker.exe --title "KrabbzDev's Porch Radar $($v.version) build $build" --notes "$notes"
