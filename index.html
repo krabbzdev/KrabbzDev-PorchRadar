@@ -994,8 +994,31 @@ const MI = 1609.344;
 const $ = id => document.getElementById(id);
 
 // ---------- settings ----------
+// Choices live in localStorage, but that belongs to one address and browser profile, so a new port, window or
+// browser would start blank. The app (on this PC only) also keeps a copy in settings.json and restores it first.
+let mirrorOn = false, mirrorTimer = 0; const mirrorQueue = {};
+try {
+  const x = new XMLHttpRequest(); x.open('GET', '/api/mirror', false); // shortcut: a blocking request, a few ms on this PC
+  x.send();
+  if (x.status === 200) {
+    mirrorOn = true;
+    const m = JSON.parse(x.responseText);
+    for (const k in m) localStorage.setItem(k, m[k]);
+    for (const k of Object.keys(localStorage)) if (k.startsWith('sky') && !(k in m)) mirrorQueue[k] = localStorage.getItem(k);
+  }
+} catch (e) {}
+function mirrorFlush() {
+  const body = JSON.stringify(mirrorQueue);
+  for (const k in mirrorQueue) delete mirrorQueue[k];
+  if (body !== '{}') fetch('/api/mirror', { method: 'POST', body, keepalive: true }).catch(() => {});
+}
+if (mirrorOn) setTimeout(mirrorFlush, 1000);
 function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
-function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function save(k, v) {
+  const s = JSON.stringify(v);
+  try { localStorage.setItem(k, s); } catch (e) {}
+  if (mirrorOn) { mirrorQueue[k] = s; clearTimeout(mirrorTimer); mirrorTimer = setTimeout(mirrorFlush, 600); }
+}
 // These map layers start off now. Browsers that had them on get them switched off once; after that, whatever
 // you pick in 🗺 Map Options sticks.
 if (!load('skyLayersOff1', false)) {

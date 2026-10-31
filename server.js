@@ -1074,6 +1074,17 @@ const server = http.createServer(async (req, res) => {
       }
       return send(res, 200, JSON.stringify({ prefs: [...(settings.pagePrefs || []), ...appPrefs()] }));
     }
+    if (url.pathname === '/api/mirror') { // this PC's copy of the dashboard's saved choices (the page's save() in index.html)
+      if (!isLocalReq(req)) return send(res, 403, '{}'); // phones and tablets keep their own
+      if (req.method === 'POST') {
+        const b = JSON.parse(await readBody(req) || '{}');
+        settings.mirror = settings.mirror || {};
+        for (const [k, v] of Object.entries(b)) if (/^sky\w{1,60}$/.test(k) && typeof v === 'string' && v.length < 20000) settings.mirror[k] = v;
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
+        return send(res, 200, '{"ok":true}');
+      }
+      return send(res, 200, JSON.stringify(settings.mirror || {}));
+    }
     if (url.pathname === '/api/reset' && req.method === 'POST') {
       // Settings > More > Reset settings to default: every option back to how a fresh install starts. Home, office,
       // accounts, the ship key, cruise lines and favorites are kept unless "everything" is asked for.
