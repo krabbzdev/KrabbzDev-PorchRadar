@@ -845,11 +845,6 @@
         <label class="chk"><input type="checkbox" id="nauticalIn" data-pref="Pilot units (knots, nautical miles)" data-pref-group="Display"> Pilot units: speeds in knots, distances in nautical miles</label>
         <p class="hint">Off: miles per hour and miles. Altitudes are always in feet. The voice uses the same units.</p>
       </div>
-      <div class="place">
-        <h4>🪟 Dashboard window</h4>
-        <label class="chk"><input type="checkbox" id="appWinIn"> Open in its own window, with sound on from the start</label>
-        <p class="hint" id="appWinHint">Off: the dashboard opens in a normal browser tab, with Edge's natural, upbeat voice. Sound needs one click on the page after it opens. On: it opens in its own window (Microsoft Edge or Google Chrome, without the address bar) where the chime and voice work straight away, but only with Windows' plainer built-in voice (Zira). Used when the app starts and when you click the tray icon.</p>
-      </div>
     </section>
 
     <!-- More: updates and optional accounts -->
@@ -929,7 +924,7 @@
       <div class="place">
         <h4>🙏 Credits</h4>
         <p class="hint">Porch Radar is built on free data and tools from many people and organizations: adsb.fi, Planespotters, Airport-Data.com, OurAirports, the FAA, NOAA, OpenStreetMap, Wikipedia, AISStream, Esri, Leaflet, Kokoro and more.</p>
-        <div class="row"><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1#data-sources-and-credits" target="_blank" rel="noopener">📜 See all the credits on GitHub ↗</a><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1/wiki/Data-Sources-and-Privacy" target="_blank" rel="noopener">Data sources and privacy ↗</a></div>
+        <div class="row"><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar#data-sources-and-credits" target="_blank" rel="noopener">📜 See all the credits on GitHub ↗</a><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar/wiki/Data-Sources-and-Privacy" target="_blank" rel="noopener">Data sources and privacy ↗</a></div>
       </div>
     </section>
     <section data-pane="reset" hidden>
@@ -961,7 +956,7 @@
   <textarea id="fbText" rows="5" maxlength="3000" placeholder="Tell us what you clicked and what happened…"></textarea>
   <div class="fb-foot"><span class="fb-note" id="fbNote">We include the app's build and which options are on, not your address.</span><button type="button" id="fbCopy" class="fb-secondary">Copy</button><button type="button" id="fbSend" class="fb-send">Send</button></div>
 </section>
-<div id="version"><span id="verText" title="Version and build number"></span><a id="verCode" target="_blank" rel="noopener" hidden></a> · <a href="#" id="verUpdate" title="Check GitHub for a newer build and install it">⬆ Update now</a> · <a href="https://flighttracker.loves3d.com" target="_blank" rel="noopener" title="The Porch Radar website">Website ↗</a> · <a id="verWiki" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1/wiki" target="_blank" rel="noopener" title="How every feature works">Wiki ↗</a> · <a id="verRepo" href="https://github.com/krabbzdev/KrabbzDev-PlaneTracker1" target="_blank" rel="noopener" title="Source code and releases on GitHub">GitHub ↗</a></div>
+<div id="version"><span id="verText" title="Version and build number"></span><a id="verCode" target="_blank" rel="noopener" hidden></a> · <a href="#" id="verUpdate" title="Check GitHub for a newer build and install it">⬆ Update now</a> · <a href="https://flighttracker.loves3d.com" target="_blank" rel="noopener" title="The Porch Radar website">Website ↗</a> · <a id="verWiki" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar/wiki" target="_blank" rel="noopener" title="How every feature works">Wiki ↗</a> · <a id="verRepo" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar" target="_blank" rel="noopener" title="Source code and releases on GitHub">GitHub ↗</a></div>
 
 <dialog id="axDlg" class="ax-dlg">
   <div class="ax-bar">
@@ -2979,7 +2974,7 @@ async function checkVersion() {
   let v;
   try { v = await fetch('/api/version', { cache: 'no-store' }).then(r => r.json()); } catch (e) { return; } // app restarting
   $('verText').textContent = `v${v.version} · build ${v.build}${v.date ? ' · ' + v.date : ''}`;
-  $('verRepo').href = 'https://github.com/' + (v.repo || 'krabbzdev/KrabbzDev-PlaneTracker1');
+  $('verRepo').href = 'https://github.com/' + (v.repo || 'krabbzdev/KrabbzDev-PorchRadar');
   // the build code: the commit it was built from, linked to that commit on GitHub
   $('verCode').hidden = !v.commit;
   if (v.commit) { $('verCode').textContent = ' · ' + v.commit; $('verCode').href = $('verRepo').href + '/commit/' + v.commit; $('verCode').title = 'Build code: the exact version of the code this was built from (opens it on GitHub)'; }
@@ -3247,7 +3242,6 @@ async function openHome(focusHome, firstRun) {
   $('homeResults').innerHTML = $('officeResults').innerHTML = '';
   showWhere('home'); showWhere('office');
   $('faIn').value = cfg.faUser || '';
-  $('appWinIn').checked = cfg.appWindow === true;
   $('lanIn').checked = !!cfg.lanAccess;
   // every address the dashboard is (or would be) served at
   const net = cfg.networkUrls || [];
@@ -3257,8 +3251,6 @@ async function openHome(focusHome, firstRun) {
       : '<br>📱 Other devices: no home network connection found');
   // opened from another device: it can look, but only the PC running the app can change settings
   if (cfg.thisPc === false) { $('saveHome').disabled = true; $('saveHome').title = 'Settings can only be changed on the PC running the app'; $('debugEmail').disabled = true; }
-  $('appWinIn').disabled = !cfg.appBrowser;
-  if (!cfg.appBrowser) $('appWinHint').textContent = 'Needs Microsoft Edge or Google Chrome installed on this PC, so the dashboard opens in your normal browser.';
   $('contactIn').value = cfg.contact || '';
   // ship tracking: the saved key is never sent back, only whether there is one
   aisClear = false; $('aisIn').value = '';
@@ -3459,7 +3451,6 @@ $('saveHome').onclick = async () => {
     office: isFinite(oLat) && isFinite(oLon) ? { name: $('offName').value.trim() || 'Office', pos: [oLat, oLon], label: placeLabel.office } : null,
     faUser: $('faIn').value.trim(),
     contact: $('contactIn').value.trim(),
-    appWindow: $('appWinIn').checked,
     lanAccess: $('lanIn').checked,
     // all ticked = null, so lines added later are watched too
     cruiseLines: (() => { const boxes = [...$('cruiseLines').querySelectorAll('input')]; return !boxes.length || boxes.every(c => c.checked) ? null : boxes.filter(c => c.checked).map(c => c.value); })(),

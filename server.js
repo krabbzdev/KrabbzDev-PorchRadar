@@ -1170,7 +1170,6 @@ const server = http.createServer(async (req, res) => {
         }
         if ('aisKey' in b) { settings.aisKey = String(b.aisKey || '').trim().slice(0, 100); setTimeout(watchConnect, 2000); }
         if ('aeroKey' in b) { settings.aeroKey = String(b.aeroKey || '').trim().slice(0, 100); aeroCache.clear(); }
-        if ('appWindow' in b) settings.appWindow = !!b.appWindow;
         if ('lanAccess' in b && !!b.lanAccess !== !!settings.lanAccess) { settings.lanAccess = !!b.lanAccess; setTimeout(relisten, 500); }
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
         aisRefresh();
@@ -1187,7 +1186,6 @@ const server = http.createServer(async (req, res) => {
         aisKeySet: !!aisKey(), aisKeyHint: aisKey() && isLocalReq(req) ? '••••' + aisKey().slice(-4) : '',
         lanAccess: !!settings.lanAccess, lanUrls: lanUrls(), thisPc: isLocalReq(req),
         localUrl: `http://localhost:${PORT}`, networkUrls: isLocalReq(req) ? networkUrls() : [],
-        appWindow: settings.appWindow === true, appBrowser: process.platform === 'win32' && !!appBrowser(),
       }));
     }
     if (url.pathname === '/api/version') return send(res, 200, JSON.stringify({ ...VERSION, exe: !!sea }));
@@ -1297,11 +1295,10 @@ const openBrowser = () => {
   if (process.env.NO_BROWSER || process.argv.includes('--background')) return;
   openDashboard();
 };
-// Optionally (Settings > Display, off unless turned on) the dashboard opens in its own app window (Edge, else
-// Chrome) that may play sound before the page is clicked; browsers normally block a page's sound until then. The
-// window uses its own browser profile in the app's folder, because that setting only applies to a browser that isn't
-// already running with your normal profile. The catch: Edge's natural online voices (the upbeat ones) don't work
-// there, only Windows' built-in voices do, so a normal browser tab is the default.
+// The dashboard always opens in its own app window (Edge, else Chrome; a normal browser tab only if neither is
+// installed). Browsers normally block a page's sound until it is clicked, but this window may play it straight away.
+// It uses its own browser profile in the app's folder, because that flag only applies to a browser that isn't already
+// running with your normal profile. Edge's natural online voices do not work there, so Kokoro or the Windows voices speak.
 const BROWSER_PROFILE = path.join(APP_DIR, 'browser-window');
 function appBrowser() {
   const bases = [process.env['ProgramFiles(x86)'], process.env.ProgramFiles, process.env.LOCALAPPDATA].filter(Boolean);
@@ -1311,7 +1308,7 @@ function appBrowser() {
 }
 function openDashboard() {
   const url = `http://localhost:${PORT}/`, cp = require('child_process');
-  const exe = process.platform === 'win32' && settings.appWindow === true ? appBrowser() : null;
+  const exe = process.platform === 'win32' ? appBrowser() : null;
   if (exe) {
     try {
       cp.spawn(exe, ['--app=' + url, '--user-data-dir=' + BROWSER_PROFILE, '--autoplay-policy=no-user-gesture-required',
@@ -1652,7 +1649,7 @@ setTimeout(() => { loadAirports().catch(() => {}); loadAirportDetails().catch(e 
 
 // ---------- self-update from GitHub Releases (only when running as the .exe) ----------
 // Each release carries Krabbz9999-FlightTracker.exe; the tag ends in the build number (e.g. v1.0.4).
-const REPO = VERSION.repo || 'krabbzdev/KrabbzDev-PlaneTracker1';
+const REPO = VERSION.repo || 'krabbzdev/KrabbzDev-PorchRadar';
 const EXE_NAME = 'Krabbz9999-FlightTracker.exe';
 let updateState = { checkedAt: null, latest: null, available: false, status: 'idle', error: null };
 // "v1.0.67.2" -> "67.2", "v1.0.67" -> 67
@@ -1793,12 +1790,11 @@ const trayChanges = []; // { seq, at, key, value }: the last 100 changes picked 
 const appPrefs = () => [
   { key: 'app:autoUpdate', label: 'Install updates automatically', group: 'App', type: 'bool', value: autoUpdate() },
   { key: 'app:lanAccess', label: 'Network access (other devices can watch)', group: 'App', type: 'bool', value: !!settings.lanAccess },
-  { key: 'app:appWindow', label: 'Open in its own window', group: 'App', type: 'bool', value: settings.appWindow === true },
 ];
 function setPref(key, value) {
   if (key.startsWith('app:')) {
     const k = key.slice(4), on = !!value;
-    if (!['autoUpdate', 'lanAccess', 'appWindow'].includes(k)) return false;
+    if (!['autoUpdate', 'lanAccess'].includes(k)) return false;
     const was = !!settings[k];
     settings[k] = on;
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
