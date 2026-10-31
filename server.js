@@ -1317,17 +1317,32 @@ function appBrowser() {
     for (const base of bases) { const p = path.join(base, rel); if (fs.existsSync(p)) return p; }
   return null;
 }
+// Only ever one dashboard window: if the app window (the one whose title is exactly the page title) is already
+// open, even minimized, it is brought forward instead of opening another.
+const FOCUS_PS = `$p = Get-Process | Where-Object { $_.MainWindowTitle -eq $env:PR_TITLE -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+if (-not $p) { exit 1 }
+Add-Type 'using System;using System.Runtime.InteropServices;public class PrWin{[DllImport("user32.dll")]public static extern bool ShowWindow(IntPtr h,int c);[DllImport("user32.dll")]public static extern bool SetForegroundWindow(IntPtr h);}'
+[PrWin]::ShowWindow($p.MainWindowHandle, 9) | Out-Null
+[PrWin]::SetForegroundWindow($p.MainWindowHandle) | Out-Null`;
+let openingWindow = false;
 function openDashboard() {
   const url = `http://localhost:${PORT}/`, cp = require('child_process');
   const exe = process.platform === 'win32' ? appBrowser() : null;
-  if (exe) {
-    try {
-      cp.spawn(exe, ['--app=' + url, '--user-data-dir=' + BROWSER_PROFILE, '--autoplay-policy=no-user-gesture-required',
-        '--no-first-run', '--no-default-browser-check', '--window-size=1500,950'], { detached: true, stdio: 'ignore' }).unref();
-      return;
-    } catch (e) { console.log('Could not open the app window: ' + e.message); }
-  }
-  cp.exec(`start "" ${url}`);
+  const open = () => {
+    if (exe) {
+      try {
+        cp.spawn(exe, ['--app=' + url, '--user-data-dir=' + BROWSER_PROFILE, '--autoplay-policy=no-user-gesture-required',
+          '--no-first-run', '--no-default-browser-check', '--window-size=1500,950'], { detached: true, stdio: 'ignore' }).unref();
+        return;
+      } catch (e) { console.log('Could not open the app window: ' + e.message); }
+    }
+    cp.exec(`start "" ${url}`);
+  };
+  if (!exe) return open();
+  if (openingWindow) return; // a second click while the first window is still starting
+  openingWindow = true; setTimeout(() => { openingWindow = false; }, 6000);
+  cp.execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', FOCUS_PS],
+    { windowsHide: true, timeout: 10000, env: { ...process.env, PR_TITLE: "KrabbzDev's Porch Radar" } }, err => { if (err) open(); });
 }
 // ---------- ships: live AIS positions from AISStream.io (optional, needs a free API key) ----------
 // AISStream only accepts server connections (never straight from a browser), so this keeps one WebSocket open for
@@ -1862,7 +1877,14 @@ server.on('error', e => {
   // our own app already running (e.g. double-clicked twice): just open the existing dashboard.
   // Some other program using the port: move to the next free one (then any port Windows picks) and remember it.
   isOurApp(PORT).then(ours => {
-    if (ours) { console.log('Already running - opening it in your browser.'); if (sea) openBrowser(); return setTimeout(() => process.exit(0), 1500); }
+    if (ours) {
+      console.log('Already running - showing its window.');
+      if (sea && !process.argv.includes('--background') && !process.env.NO_BROWSER) { // the running copy opens or raises the one window
+        const r = http.request({ host: '127.0.0.1', port: PORT, path: '/api/open', method: 'POST', headers: { 'x-ft-tray': '1' } });
+        r.on('error', () => {}); r.end();
+      }
+      return setTimeout(() => process.exit(0), 1500);
+    }
     const was = PORT; PORT = portTries++ < 10 ? PORT + 1 : 0;
     console.log(`Port ${was} is in use by another program, trying ${PORT || 'one Windows picks'}`);
     server.listen(PORT, lanHost(), startedUp);
