@@ -1157,8 +1157,9 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/open' && req.method === 'POST') {
       // the tray icon's "Open": same window as when the app starts
       const local = /^(::1|127\.|::ffff:127\.)/.test(req.socket.remoteAddress || '');
-      if (!local || req.headers['x-ft-tray'] !== '1') return send(res, 403, '{"error":"forbidden"}');
-      openDashboard();
+      const how = req.headers['x-ft-tray']; // '1' = the tray icon or its menu, '2' = the app started a second time
+      if (!local || (how !== '1' && how !== '2')) return send(res, 403, '{"error":"forbidden"}');
+      openDashboard(how === '1' && settings.trayOpen === 'browser'); // Settings > Display > Tray icon
       return send(res, 200, '{"ok":true}');
     }
     const tk = url.pathname.match(/^\/api\/track\/([0-9a-f~]{6,7})$/i);
@@ -1181,7 +1182,8 @@ const server = http.createServer(async (req, res) => {
         }
         if ('aisKey' in b) { settings.aisKey = String(b.aisKey || '').trim().slice(0, 100); setTimeout(watchConnect, 2000); }
         if ('aeroKey' in b) { settings.aeroKey = String(b.aeroKey || '').trim().slice(0, 100); aeroCache.clear(); }
-        if ('lanAccess' in b && !!b.lanAccess !== !!settings.lanAccess) { settings.lanAccess = !!b.lanAccess; setTimeout(relisten, 500); }
+        if ('trayOpen' in b) settings.trayOpen = b.trayOpen === 'browser' ? 'browser' : 'window';
+        if ('lanAccess' in b &&!!b.lanAccess !== !!settings.lanAccess) { settings.lanAccess = !!b.lanAccess; setTimeout(relisten, 500); }
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
         aisRefresh();
         latest = null; // next page poll fetches for the new location
@@ -1197,6 +1199,7 @@ const server = http.createServer(async (req, res) => {
         aisKeySet: !!aisKey(), aisKeyHint: aisKey() && isLocalReq(req) ? '••••' + aisKey().slice(-4) : '',
         lanAccess: !!settings.lanAccess, lanUrls: lanUrls(), thisPc: isLocalReq(req),
         localUrl: `http://localhost:${PORT}`, networkUrls: isLocalReq(req) ? networkUrls() : [],
+        trayOpen: settings.trayOpen === 'browser' ? 'browser' : 'window',
       }));
     }
     if (url.pathname === '/api/version') return send(res, 200, JSON.stringify({ ...VERSION, exe: !!sea }));
@@ -1325,8 +1328,9 @@ Add-Type 'using System;using System.Runtime.InteropServices;public class PrWin{[
 [PrWin]::ShowWindow($p.MainWindowHandle, 9) | Out-Null
 [PrWin]::SetForegroundWindow($p.MainWindowHandle) | Out-Null`;
 let openingWindow = false;
-function openDashboard() {
+function openDashboard(inBrowser) {
   const url = `http://localhost:${PORT}/`, cp = require('child_process');
+  if (inBrowser) return cp.exec(`start "" ${url}`);
   const exe = process.platform === 'win32' ? appBrowser() : null;
   const open = () => {
     if (exe) {
@@ -1880,7 +1884,7 @@ server.on('error', e => {
     if (ours) {
       console.log('Already running - showing its window.');
       if (sea && !process.argv.includes('--background') && !process.env.NO_BROWSER) { // the running copy opens or raises the one window
-        const r = http.request({ host: '127.0.0.1', port: PORT, path: '/api/open', method: 'POST', headers: { 'x-ft-tray': '1' } });
+        const r = http.request({ host: '127.0.0.1', port: PORT, path: '/api/open', method: 'POST', headers: { 'x-ft-tray': '2' } });
         r.on('error', () => {}); r.end();
       }
       return setTimeout(() => process.exit(0), 1500);

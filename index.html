@@ -845,6 +845,15 @@
         <label class="chk"><input type="checkbox" id="nauticalIn" data-pref="Pilot units (knots, nautical miles)" data-pref-group="Display"> Pilot units: speeds in knots, distances in nautical miles</label>
         <p class="hint">Off: miles per hour and miles. Altitudes are always in feet. The voice uses the same units.</p>
       </div>
+      <div class="place">
+        <h4>🪟 Tray icon</h4>
+        <label class="lbl" for="trayOpenIn">Clicking the tray icon opens</label>
+        <select id="trayOpenIn" style="width:100%">
+          <option value="window">The Porch Radar window (default)</option>
+          <option value="browser">A web browser tab</option>
+        </select>
+        <p class="hint">The window is the app's own, without an address bar, where the chime and voice work straight away. A browser tab needs one click on the page before sound plays, and it keeps its own saved choices.</p>
+      </div>
     </section>
 
     <!-- More: updates and optional accounts -->
@@ -3265,6 +3274,7 @@ async function openHome(focusHome, firstRun) {
   $('homeResults').innerHTML = $('officeResults').innerHTML = '';
   showWhere('home'); showWhere('office');
   $('faIn').value = cfg.faUser || '';
+  $('trayOpenIn').value = cfg.trayOpen === 'browser' ? 'browser' : 'window';
   $('lanIn').checked = !!cfg.lanAccess;
   // every address the dashboard is (or would be) served at
   const net = cfg.networkUrls || [];
@@ -3473,6 +3483,7 @@ $('saveHome').onclick = async () => {
     homeName: $('homeNameIn').value.trim(),
     office: isFinite(oLat) && isFinite(oLon) ? { name: $('offName').value.trim() || 'Office', pos: [oLat, oLon], label: placeLabel.office } : null,
     faUser: $('faIn').value.trim(),
+    trayOpen: $('trayOpenIn').value,
     contact: $('contactIn').value.trim(),
     lanAccess: $('lanIn').checked,
     // all ticked = null, so lines added later are watched too
