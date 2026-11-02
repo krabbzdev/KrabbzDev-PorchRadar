@@ -1,5 +1,7 @@
 # KrabbzDev's Porch Radar
 
+By **Charles Love** (Krabbz9999).
+
 A live dashboard of the planes flying over your house. Runs on any Windows PC as a single `.exe`,
 shows a map of everything nearby, and takes over the screen with a close-up and a spoken alert
 when a plane passes right overhead.
@@ -131,4 +133,4 @@ contacts these services directly from your computer:
 
 ## License
 
-[MIT](LICENSE) © 2026 Krabbz9999
+[MIT](LICENSE) © 2026 Charles Love (Krabbz9999)
