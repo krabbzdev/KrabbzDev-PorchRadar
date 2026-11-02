@@ -9,8 +9,9 @@ when a plane passes right overhead.
 ## Install
 
 1. Download **`Krabbz9999-FlightTracker-Setup.exe`** from the [latest release](../../releases/latest) and run it.
-   - Windows may say *"Windows protected your PC"* because the app isn't code-signed.
-     Click **More info → Run anyway**.
+   - The installer and app are code-signed by **Open Source Developer Charles Love** (certificate from Certum).
+     While the certificate is new, Windows may still say *"Windows protected your PC"*; click
+     **More info → Run anyway**. That warning fades as more people install it.
    - It installs for you only, **without admin rights**, into
      `C:\Users\Public\Apps\Krabbz9999-FlightTracker`, with a Start menu entry. Optional: a desktop
      shortcut, and starting with Windows (in the tray, without opening the browser).
@@ -109,12 +110,17 @@ Needs [Node.js](https://nodejs.org) 22+ (24 recommended).
 ```bat
 node server.js        rem run from source at http://localhost:8090
 build-exe.cmd         rem build Krabbz9999-FlightTracker.exe locally, for testing (and the installer, if Inno Setup 6 is installed)
-release.cmd "notes"   rem bump the build number, tag and push; GitHub builds and publishes the release
+release.cmd "notes"   rem bump the build number, tag and push; GitHub builds it as a draft release
+sign-release.cmd      rem sign the draft with the Certum certificate and publish it
 ```
 
+`sign-release.cmd` runs on the PC that has the signing certificate. It needs SimplySign Desktop (logged in),
+the Windows SDK signing tools, Inno Setup 6 and the [GitHub CLI](https://cli.github.com) (`gh auth login` once).
+
 `server.js` is the whole back end (no dependencies) and `index.html` is the whole front end.
-Published `.exe` files are always built from this repository by
-[GitHub Actions](.github/workflows/release.yml), never on a personal computer.
+The app `.exe` is always built from this repository by
+[GitHub Actions](.github/workflows/release.yml), never on a personal computer; `sign-release.cmd` only signs it
+and wraps the signed copy in the installer.
 
 ## Privacy
 

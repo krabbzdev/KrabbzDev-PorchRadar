@@ -1,5 +1,7 @@
-# Builds Krabbz9999-FlightTracker.exe on GitHub and publishes it as a release.
-# Triggered by pushing a version tag (release.cmd does this).
+# Builds Krabbz9999-FlightTracker.exe on GitHub and saves it as a DRAFT release.
+# Triggered by pushing a version tag (release.cmd does this). sign-release.cmd then signs the files
+# on the PC with the Certum certificate and publishes the release. Installed copies only see published
+# releases, so they never update to an unsigned build.
 
 name: Build and release
 
@@ -51,7 +53,7 @@ jobs:
           & $iscc /Q "/DAppVersion=$($v.version).$build" installer\FlightTracker.iss
           if ($LASTEXITCODE) { throw 'Installer build failed' }
 
-      - name: Publish the release
+      - name: Save the draft release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -61,4 +63,4 @@ jobs:
           $build = if ($v.patch) { "$($v.build).$($v.patch)" } else { "$($v.build)" }
           if (-not $notes.Trim()) { $notes = "Build $build" }
           # the installer is what people download; the plain .exe is what installed copies update themselves from
-          gh release create $env:GITHUB_REF_NAME dist\Krabbz9999-FlightTracker-Setup.exe Krabbz9999-FlightTracker.exe --title "KrabbzDev's Porch Radar $($v.version) build $build" --notes "$notes"
+          gh release create $env:GITHUB_REF_NAME --draft dist\Krabbz9999-FlightTracker-Setup.exe Krabbz9999-FlightTracker.exe --title "KrabbzDev's Porch Radar $($v.version) build $build" --notes "$notes"

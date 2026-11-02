@@ -1,6 +1,6 @@
 ; Installer for KrabbzDev's Porch Radar (Inno Setup 6, https://jrsoftware.org/isinfo.php).
 ; Installs for the current user WITHOUT admin rights, into C:\Users\Public\Apps\Krabbz9999-FlightTracker.
-; Built by GitHub Actions on every release (.github/workflows/release.yml):
+; Built by GitHub Actions on every release (.github/workflows/release.yml), then rebuilt and signed by sign-release.cmd:
 ;   ISCC.exe /DAppVersion=1.0.44 installer\FlightTracker.iss   ->   dist\Krabbz9999-FlightTracker-Setup.exe
 ; The app keeps its settings and data next to the .exe, which is why it goes in a folder the user can write to,
 ; and it updates itself in place from GitHub Releases after that.
@@ -39,6 +39,10 @@ CloseApplications=force
 RestartApplications=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+#ifdef SignWith
+; set by sign-release.ps1: signs the setup and its uninstaller with the Certum certificate
+SignTool={#SignWith}
+#endif
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
