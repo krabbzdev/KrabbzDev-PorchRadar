@@ -1,5 +1,7 @@
 # KrabbzDev's Porch Radar
 
+[![Install now](https://img.shields.io/badge/Install_now-Windows_installer-0048FE?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases/latest/download/Krabbz9999-FlightTracker-Setup.exe)
+
 By **Charles Love** (Krabbz9999).
 
 A live dashboard of the planes flying over your house. Runs on any Windows PC as a single `.exe`,
