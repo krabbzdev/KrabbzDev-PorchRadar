@@ -14,7 +14,14 @@ const path = require('path');
 // files like the airport cache live next to the .exe instead of next to this script.
 let sea = null;
 try { sea = require('node:sea'); if (!sea.isSea()) sea = null; } catch (e) {}
-const APP_DIR = sea ? path.dirname(process.execPath) : __dirname;
+// The installer (build 70 on) lays the app out as a fixed base plus replaceable code:
+//   <install folder>\Krabbz9999-FlightTracker.exe   the launcher (starts the runtime hidden)
+//   <install folder>\runtime\node.exe               the real, signed Node.js, never modified
+//   <install folder>\app\server.js, index.html, version.json   this code: updates replace only these files
+// Settings and data live in the install folder, as before. Older installs are a single .exe (sea) and still work.
+const BUNDLE = !sea && path.basename(__dirname) === 'app' && fs.existsSync(path.join(__dirname, '..', 'runtime', 'node.exe'));
+const INSTALLED = !!sea || BUNDLE; // either way: tray icon, own window and self-update are on
+const APP_DIR = sea ? path.dirname(process.execPath) : BUNDLE ? path.dirname(__dirname) : __dirname;
 const indexHtml = () => sea ? Buffer.from(sea.getAsset('index.html')) : fs.readFileSync(path.join(__dirname, 'index.html'));
 // version + build number, bumped by build-exe.cmd on every build and baked into the .exe
 let VERSION = { version: '1.0', build: 'dev', date: null };
@@ -23,7 +30,7 @@ try { VERSION = JSON.parse(sea ? Buffer.from(sea.getAsset('version.json')).toStr
 // builds go by day: 67 for the day's first release, then 67.1, 67.2... (release.cmd); shown and compared as "67.2"
 if (VERSION.patch) VERSION.build = `${VERSION.build}.${VERSION.patch}`;
 // the build code: the commit it was built from (stamped in by GitHub's build; from git when running from source)
-if (!VERSION.commit && !sea) {
+if (!VERSION.commit && !INSTALLED) {
   try { VERSION.commit = require('child_process').execSync('git rev-parse --short=7 HEAD', { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch (e) {}
 }
 
@@ -1202,7 +1209,7 @@ const server = http.createServer(async (req, res) => {
         trayOpen: settings.trayOpen === 'browser' ? 'browser' : 'window',
       }));
     }
-    if (url.pathname === '/api/version') return send(res, 200, JSON.stringify({ ...VERSION, exe: !!sea }));
+    if (url.pathname === '/api/version') return send(res, 200, JSON.stringify({ ...VERSION, exe: INSTALLED }));
     if (url.pathname === '/api/update') {
       if (req.method === 'POST') {
         const b = JSON.parse((await readBody(req)) || '{}');
@@ -1210,7 +1217,7 @@ const server = http.createServer(async (req, res) => {
         if (b.check) await checkForUpdate();
         if (b.install) applyUpdate().catch(() => {});
       }
-      return send(res, 200, JSON.stringify({ current: VERSION, exe: !!sea, autoUpdate: autoUpdate(), repo: REPO, ...updateState }));
+      return send(res, 200, JSON.stringify({ current: VERSION, exe: INSTALLED, autoUpdate: autoUpdate(), repo: REPO, ...updateState }));
     }
     if (url.pathname === '/api/log') return send(res, 200, JSON.stringify(logSummary()));
     const rg = url.pathname.match(/^\/api\/registry\/([A-Z0-9-]{2,10})$/i);
@@ -1677,10 +1684,19 @@ const lastSeenInfo = mmsi => { const l = lastSeen[mmsi]; return l ? { ...l, mmsi
 const isLiveShip = mmsi => { const s = ships.get(mmsi); return s && s.lat != null && Date.now() - (s.seen || 0) < 900000 ? s : null; };
 setTimeout(() => { loadAirports().catch(() => {}); loadAirportDetails().catch(e => console.log('Airport details not loaded: ' + e.message)); buildFleet().catch(e => console.log('Cruise fleet list not built: ' + e.message)); }, 5000);
 
-// ---------- self-update from GitHub Releases (only when running as the .exe) ----------
-// Each release carries Krabbz9999-FlightTracker.exe; the tag ends in the build number (e.g. v1.0.4).
+// ---------- self-update from GitHub Releases (only when installed) ----------
+// Each release carries two things; the tag ends in the build number (e.g. v1.0.4):
+//  - Krabbz9999-FlightTracker-code.gz: just this app's code (server.js, index.html, version.json). Installs made by the
+//    installer (the BUNDLE layout above) update from this, so the signed runtime and launcher never change.
+//  - Krabbz9999-FlightTracker.exe: the old single-file build, kept so installs from before build 70 can still update.
 const REPO = VERSION.repo || 'krabbzdev/KrabbzDev-PorchRadar';
 const EXE_NAME = 'Krabbz9999-FlightTracker.exe';
+const CODE_NAME = 'Krabbz9999-FlightTracker-code.gz';
+const CODE_FILES = ['server.js', 'index.html', 'version.json']; // the only files an update may write, all inside app\
+const UPDATE_ASSET = BUNDLE ? CODE_NAME : EXE_NAME;
+// Bumped (in installer/base.json) only when the installer's own files change in a way new code depends on.
+// A code update that needs a newer base is not installed; the person is asked to run the new installer instead.
+const BASE_LEVEL = (() => { try { return +JSON.parse(fs.readFileSync(path.join(APP_DIR, 'base.json'), 'utf8')).base || 1; } catch (e) { return 1; } })();
 let updateState = { checkedAt: null, latest: null, available: false, status: 'idle', error: null };
 // "v1.0.67.2" -> "67.2", "v1.0.67" -> 67
 const buildOf = tag => { const m = String(tag || '').trim().match(/^v?\d+\.\d+\.(\d+)(?:\.(\d+))?$/); return !m ? 0 : m[2] ? `${m[1]}.${m[2]}` : +m[1]; };
@@ -1694,7 +1710,7 @@ async function checkForUpdate() {
     if (r.status === 404) throw new Error('No releases published yet');
     if (r.status !== 200) throw new Error(`GitHub answered HTTP ${r.status}`);
     const rel = JSON.parse(r.body);
-    const asset = (rel.assets || []).find(a => a.name === EXE_NAME);
+    const asset = (rel.assets || []).find(a => a.name === UPDATE_ASSET);
     const latest = buildOf(rel.tag_name);
     updateState = { ...updateState, checkedAt: Date.now(), error: null,
       latest: { build: latest, tag: rel.tag_name, url: rel.html_url, notes: (rel.body || '').slice(0, 2000) },
@@ -1706,8 +1722,56 @@ async function checkForUpdate() {
   }
 }
 
+// The single-file build: Windows can't overwrite a running .exe, but it can rename it: swap, start the new one, exit.
+function swapExe(body) {
+  const exe = process.execPath, old = exe + '.old', fresh = exe + '.new';
+  fs.writeFileSync(fresh, body);
+  try { fs.unlinkSync(old); } catch (e) {}
+  fs.renameSync(exe, old);
+  fs.renameSync(fresh, exe);
+  return { cmd: exe, args: [] };
+}
+
+// The installed build: unpack the code bundle and replace only the files in app\, keeping the previous ones as .old.
+// Everything is checked before the first file is touched, so a bad download can't leave a half-updated app.
+function swapCode(body) {
+  let bundle;
+  try { bundle = JSON.parse(require('zlib').gunzipSync(body).toString('utf8')); } catch (e) { throw new Error('The update file is not readable'); }
+  if (!bundle || typeof bundle.files !== 'object') throw new Error('The update file is not readable');
+  if ((+bundle.needsBase || 1) > BASE_LEVEL) throw new Error('This update needs a newer installer: download it from the releases page');
+  const files = {};
+  for (const name of CODE_FILES) {
+    const b64 = bundle.files[name];
+    if (typeof b64 !== 'string' || !b64) throw new Error(`The update is missing ${name}`);
+    files[name] = Buffer.from(b64, 'base64');
+  }
+  for (const name of Object.keys(bundle.files)) if (!CODE_FILES.includes(name)) throw new Error(`The update has an unexpected file: ${name}`);
+  try { new (require('vm').Script)(files['server.js'].toString('utf8'), { filename: 'server.js' }); }
+  catch (e) { throw new Error('The new server.js did not pass a syntax check: ' + e.message); }
+  try { JSON.parse(files['version.json'].toString('utf8')); } catch (e) { throw new Error('The new version.json is not valid'); }
+  const dir = __dirname;
+  for (const name of CODE_FILES) fs.writeFileSync(path.join(dir, name + '.new'), files[name]);
+  try {
+    for (const name of CODE_FILES) {
+      const file = path.join(dir, name);
+      try { fs.unlinkSync(file + '.old'); } catch (e) {}
+      fs.renameSync(file, file + '.old');
+      fs.renameSync(file + '.new', file);
+    }
+  } catch (e) { // put back what was already swapped, so the app is whole again
+    for (const name of CODE_FILES) {
+      const file = path.join(dir, name);
+      try { if (fs.existsSync(file + '.old')) { fs.renameSync(file + '.old', file); } } catch (e2) {}
+      try { fs.unlinkSync(file + '.new'); } catch (e2) {}
+    }
+    throw e;
+  }
+  // restart the same runtime on the new code (windowsHide below keeps the console window away)
+  return { cmd: process.execPath, args: [path.join(dir, 'server.js')] };
+}
+
 async function applyUpdate() {
-  if (!sea) throw new Error('Updates install only when running as the .exe');
+  if (!INSTALLED) throw new Error('Updates install only in the installed app');
   if (updateState.status === 'installing') return;
   const { asset } = await checkForUpdate();
   if (!updateState.available || !asset) return;
@@ -1722,14 +1786,10 @@ async function applyUpdate() {
       const sum = require('crypto').createHash('sha256').update(dl.body).digest('hex');
       if ('sha256:' + sum !== asset.digest) throw new Error('Checksum did not match');
     }
-    // Windows can't overwrite a running .exe, but it can rename it: swap, start the new one, exit.
-    const exe = process.execPath, old = exe + '.old', fresh = exe + '.new';
-    fs.writeFileSync(fresh, dl.body);
-    try { fs.unlinkSync(old); } catch (e) {}
-    fs.renameSync(exe, old);
-    fs.renameSync(fresh, exe);
+    const next = BUNDLE ? swapCode(dl.body) : swapExe(dl.body);
     saveLog();
-    require('child_process').spawn(exe, [], { detached: true, stdio: 'ignore', cwd: APP_DIR, env: { ...process.env, FT_RESTART: '1', NO_BROWSER: '1' } }).unref();
+    require('child_process').spawn(next.cmd, next.args, { detached: true, stdio: 'ignore', windowsHide: true, cwd: APP_DIR,
+      env: { ...process.env, FT_RESTART: '1', NO_BROWSER: '1' } }).unref();
     console.log('Update installed - restarting.');
     setTimeout(() => process.exit(0), 500);
   } catch (e) {
@@ -1738,31 +1798,36 @@ async function applyUpdate() {
   }
 }
 const autoUpdate = () => settings.autoUpdate !== false;
-if (sea) {
-  try { fs.unlinkSync(process.execPath + '.old'); } catch (e) {} // leftover from the last update
+if (INSTALLED) {
+  if (sea) { try { fs.unlinkSync(process.execPath + '.old'); } catch (e) {} } // leftover from the last update
+  // (the code bundle's previous files stay as .old until the next update replaces them, in case a rollback is ever needed)
   const tick = () => (autoUpdate() ? applyUpdate() : checkForUpdate()).catch(() => {});
   setTimeout(tick, 60000);
   setInterval(tick, 6 * 3600000);
 }
 
-// ---------- system tray icon (Windows .exe only) ----------
-// Node has no tray support, so the .exe carries a tiny helper (tray/Tray.cs, compiled at build time)
-// that shows a ✈ icon with Open / Quit. It's unpacked next to the app and closes itself when this
-// process exits (including when an update restarts it; the new copy starts its own).
+// ---------- system tray icon (installed app only) ----------
+// Node has no tray support, so the app has a tiny helper (tray/Tray.cs, compiled at build time) that shows a ✈ icon
+// with Open / Quit. The installer puts it in the install folder (the single-file build carries it inside the .exe and
+// unpacks it). It closes itself when this process exits, including when an update restarts it; the new copy starts its own.
+// It is part of the installer's base, so it is not replaced by a code update.
 const TRAY_EXE = path.join(APP_DIR, 'Krabbz9999-FlightTracker-Tray.exe');
 function startTray(tries = 0) {
-  if (!sea || process.platform !== 'win32' || process.env.NO_TRAY) return;
-  let bin;
-  try { bin = Buffer.from(sea.getAsset('tray.exe')); } catch (e) { return; } // built without the helper
-  try {
-    let current = null;
-    try { current = fs.readFileSync(TRAY_EXE); } catch (e) {}
-    if (!current || !current.equals(bin)) fs.writeFileSync(TRAY_EXE, bin);
-  } catch (e) {
-    // just updated: the old copy's helper may still be closing and holding the file
-    if (tries < 5) return setTimeout(() => startTray(tries + 1), 2000);
-    return console.log('Tray icon unavailable: ' + e.message);
+  if (!INSTALLED || process.platform !== 'win32' || process.env.NO_TRAY) return;
+  if (sea) {
+    let bin;
+    try { bin = Buffer.from(sea.getAsset('tray.exe')); } catch (e) { return; } // built without the helper
+    try {
+      let current = null;
+      try { current = fs.readFileSync(TRAY_EXE); } catch (e) {}
+      if (!current || !current.equals(bin)) fs.writeFileSync(TRAY_EXE, bin);
+    } catch (e) {
+      // just updated: the old copy's helper may still be closing and holding the file
+      if (tries < 5) return setTimeout(() => startTray(tries + 1), 2000);
+      return console.log('Tray icon unavailable: ' + e.message);
+    }
   }
+  if (!fs.existsSync(TRAY_EXE)) return console.log('Tray icon unavailable: Krabbz9999-FlightTracker-Tray.exe is missing');
   try {
     require('child_process').spawn(TRAY_EXE, [String(PORT), String(process.pid), `KrabbzDev's Porch Radar (build ${VERSION.build})`],
       { detached: true, stdio: 'ignore', cwd: APP_DIR }).unref();
@@ -1774,7 +1839,7 @@ function debugReport() {
   const os = require('os'), yes = v => v ? 'yes' : 'no';
   const lines = [
     `KrabbzDev's Porch Radar ${VERSION.version} build ${VERSION.build} (${VERSION.date || 'from source'})`,
-    `Windows ${os.release()} ${os.arch()} · Node ${process.versions.node} · ${sea ? 'installed .exe' : 'running from source'} · up ${Math.round(process.uptime() / 60)} min`,
+    `Windows ${os.release()} ${os.arch()} · Node ${process.versions.node} · ${sea ? 'installed .exe' : BUNDLE ? 'installed (code bundle)' : 'running from source'} · up ${Math.round(process.uptime() / 60)} min`,
     `Saved ${new Date().toString()}`,
     '',
     // settings in outline only: no addresses, usernames or keys
@@ -1883,7 +1948,7 @@ server.on('error', e => {
   isOurApp(PORT).then(ours => {
     if (ours) {
       console.log('Already running - showing its window.');
-      if (sea && !process.argv.includes('--background') && !process.env.NO_BROWSER) { // the running copy opens or raises the one window
+      if (INSTALLED && !process.argv.includes('--background') && !process.env.NO_BROWSER) { // the running copy opens or raises the one window
         const r = http.request({ host: '127.0.0.1', port: PORT, path: '/api/open', method: 'POST', headers: { 'x-ft-tray': '2' } });
         r.on('error', () => {}); r.end();
       }
@@ -1913,5 +1978,5 @@ function startedUp() {
   }
   aisConnect();
   console.log(`KrabbzDev's Porch Radar v${VERSION.version} build ${VERSION.build} running at http://localhost:${PORT}${settings.lanAccess ? ' and ' + lanUrls().join(', ') : ''}`);
-  if (sea) { console.log('To stop it, close this window or right-click the plane icon in the system tray and choose Quit.'); openBrowser(); startTray(); }
+  if (INSTALLED) { console.log('To stop it, close this window or right-click the plane icon in the system tray and choose Quit.'); openBrowser(); startTray(); }
 }

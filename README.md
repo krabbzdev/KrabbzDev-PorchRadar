@@ -1,6 +1,6 @@
 # KrabbzDev's Porch Radar
 
-[![Install now](https://img.shields.io/badge/Install_now-Windows_installer-0048FE?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases/latest/download/Krabbz9999-FlightTracker-Setup.exe)
+[![Install now](https://img.shields.io/badge/Install_now-Windows_installer-0048FE?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases/download/installer/Krabbz9999-FlightTracker-Setup.exe)
 
 By **Charles Love** (Krabbz9999).
 
@@ -10,21 +10,22 @@ when a plane passes right overhead.
 
 ## Install
 
-1. Download **`Krabbz9999-FlightTracker-Setup.exe`** from the [latest release](../../releases/latest) and run it.
-   - Windows may say *"Windows protected your PC"* because the app isn't code-signed.
-     Click **More info → Run anyway**.
+1. Download **`Krabbz9999-FlightTracker-Setup.exe`** from the [installer release](../../releases/tag/installer) and run it.
+   - The installer is code-signed. A new publisher can still get a *"Windows protected your PC"* notice from
+     SmartScreen until the file has built up reputation: click **More info → Run anyway**.
    - It installs for you only, **without admin rights**, into
      `C:\Users\Public\Apps\Krabbz9999-FlightTracker`, with a Start menu entry. Optional: a desktop
      shortcut, and starting with Windows (in the tray, without opening the browser).
 2. Your browser opens the dashboard at `http://localhost:8090`. The first time, it asks for your
    **ZIP code or address**. That's it.
 
-Nothing else to install: no Node.js, no accounts. The dashboard opens only on the PC it's installed on,
+Nothing else to install: no Node.js, no accounts (the installer includes its own copy of Node.js). The dashboard opens only on the PC it's installed on,
 unless you turn on **Settings → Network** to let phones and tablets on your home Wi-Fi watch it too. To stop it, right-click the ✈ tray icon → **Quit**. To uninstall, use Windows
 **Settings → Apps** (your settings and log are left in the install folder; delete it to remove them).
 
-The plain `Krabbz9999-FlightTracker.exe` is in each release too: it's what installed copies update
-themselves from, and it still runs on its own from any folder.
+Installed layout: `Krabbz9999-FlightTracker.exe` is a small launcher, `runtime\node.exe` is Node.js's own signed
+binary (never modified) and `app\` holds the app's code. Earlier builds (before 70) were a single `.exe`;
+run the installer once to move to the new layout. Your settings and data stay where they were.
 
 ## Support
 
@@ -41,7 +42,10 @@ If Porch Radar makes you smile, you can [buy me a coffee](https://buymeacoffee.c
 ## Updates
 
 The app checks this repository's releases a minute after it starts and every 6 hours. When there's a
-newer build it downloads it, swaps itself and restarts, and open pages reload onto the new version.
+newer build it downloads just the app's code (a few hundred KB, checked against the SHA-256 GitHub publishes for it
+and against a syntax check), swaps those files in `app\`, and restarts, and open pages reload onto the new version.
+The signed launcher, tray helper and Node.js runtime are not touched, so a normal update never needs re-signing.
+If a build ever needs newer installer files, the app says so instead of installing it.
 You can turn that off, or check now, under **⚙ Settings → Updates**. The build number is shown in the
 bottom-right corner.
 
@@ -110,13 +114,30 @@ Needs [Node.js](https://nodejs.org) 22+ (24 recommended).
 
 ```bat
 node server.js        rem run from source at http://localhost:8090
-build-exe.cmd         rem build Krabbz9999-FlightTracker.exe locally, for testing (and the installer, if Inno Setup 6 is installed)
-release.cmd "notes"   rem bump the build number, tag and push; GitHub builds and publishes the release
+build-exe.cmd         rem build the old single-file Krabbz9999-FlightTracker.exe locally, for testing
+release.cmd "notes"   rem bump the build number, tag and push; GitHub builds and publishes the code update
+build-installer.cmd   rem build and sign the Windows installer (rarely needed); add -Upload to publish it
 ```
 
 `server.js` is the whole back end (no dependencies) and `index.html` is the whole front end.
-Published `.exe` files are always built from this repository by
-[GitHub Actions](.github/workflows/release.yml), never on a personal computer.
+Code updates are always built from this repository by [GitHub Actions](.github/workflows/release.yml).
+The installer and its launcher and tray helper are built from this repository on the maintainer's PC by
+`build-installer.cmd`, which signs them with a code-signing certificate, then published to the
+[`installer` release](../../releases/tag/installer). That only happens when those files change (see
+[Releasing](#releasing)).
+
+## Releasing
+
+- **A normal release** (any change to `server.js` or `index.html`): `release.cmd "what changed"`. GitHub builds a
+  code bundle (`Krabbz9999-FlightTracker-code.gz`) and installed copies pick it up within hours. Nothing to sign.
+- **A new installer** (only when `launcher\`, `tray\`, `installer\` or the bundled Node.js version changes):
+  sign in to the code-signing app (so the certificate is available), then run `build-installer.cmd -Upload`.
+  If new code depends on new installer files, raise `base` in `installer\base.json` first, so older installs
+  are told to run the new installer instead of installing a build they can't run.
+- Keep an eye on Node.js security releases: the runtime inside the installer is the version that was installed,
+  so refresh the installer now and then.
+- Builds before 70 (single `.exe`) still update from `Krabbz9999-FlightTracker.exe`, which releases keep publishing
+  for them. Remove that file and its build step from the workflow once those installs are gone.
 
 ## Privacy
 
