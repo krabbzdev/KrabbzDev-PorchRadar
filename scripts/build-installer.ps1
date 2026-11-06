@@ -79,10 +79,11 @@ foreach ($f in 'server.js', 'index.html') { Copy-Item $f "$base\app\$f" }
 $v = Get-Content version.json -Raw | ConvertFrom-Json
 # (from a downloaded ZIP there is no git, so the commit is left out)
 $commit = $null
-if (Get-Command git -ErrorAction SilentlyContinue) { try { $commit = (git rev-parse --short=7 HEAD 2>$null | Out-String).Trim() } catch {} }
+$haveGit = (Test-Path .git) -and [bool](Get-Command git -ErrorAction SilentlyContinue)
+if ($haveGit) { try { $commit = (git rev-parse --short=7 HEAD 2>$null | Out-String).Trim() } catch {} }
 if ($commit) { $v | Add-Member -NotePropertyName commit -NotePropertyValue $commit -Force }
 [IO.File]::WriteAllText((Join-Path (Get-Location) "$base\app\version.json"), ($v | ConvertTo-Json -Compress), (New-Object Text.UTF8Encoding $false))
-if ((Get-Command git -ErrorAction SilentlyContinue) -and (git status --porcelain 2>$null)) { Write-Warning 'You have uncommitted changes; the installer contains them, but GitHub does not have them yet.' }
+if ($haveGit) { try { if (git status --porcelain 2>$null) { Write-Warning 'You have uncommitted changes; the installer contains them, but GitHub does not have them yet.' } } catch {} }
 
 Step 'Signing the launcher and tray helper'
 Sign (Resolve-Path "$base\Krabbz9999-FlightTracker.exe").Path
