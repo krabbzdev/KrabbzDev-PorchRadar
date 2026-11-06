@@ -77,10 +77,12 @@ Copy-Item $node "$base\runtime\node.exe"
 foreach ($f in 'server.js', 'index.html') { Copy-Item $f "$base\app\$f" }
 # version.json gets the commit stamped in, like GitHub's build does. Written without a byte-order mark, which Node can't parse.
 $v = Get-Content version.json -Raw | ConvertFrom-Json
-$commit = (git rev-parse --short=7 HEAD).Trim()
-$v | Add-Member -NotePropertyName commit -NotePropertyValue $commit -Force
+# (from a downloaded ZIP there is no git, so the commit is left out)
+$commit = $null
+if (Get-Command git -ErrorAction SilentlyContinue) { try { $commit = (git rev-parse --short=7 HEAD 2>$null | Out-String).Trim() } catch {} }
+if ($commit) { $v | Add-Member -NotePropertyName commit -NotePropertyValue $commit -Force }
 [IO.File]::WriteAllText((Join-Path (Get-Location) "$base\app\version.json"), ($v | ConvertTo-Json -Compress), (New-Object Text.UTF8Encoding $false))
-if ((git status --porcelain)) { Write-Warning 'You have uncommitted changes; the installer contains them, but GitHub does not have them yet.' }
+if ((Get-Command git -ErrorAction SilentlyContinue) -and (git status --porcelain 2>$null)) { Write-Warning 'You have uncommitted changes; the installer contains them, but GitHub does not have them yet.' }
 
 Step 'Signing the launcher and tray helper'
 Sign (Resolve-Path "$base\Krabbz9999-FlightTracker.exe").Path
