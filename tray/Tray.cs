@@ -27,6 +27,7 @@ static class Tray
     [STAThread]
     static void Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == "--make-icon") { MakeIcon(args[1]); return; }
         if (args.Length >= 3 && args[0] == "--email") { DebugEmail.Send(args[1], args[2]); return; }
         int port, appPid;
         if (args.Length < 2 || !int.TryParse(args[0], out port) || !int.TryParse(args[1], out appPid)) return;
@@ -78,8 +79,7 @@ static class Tray
         try { return p.HasExited; } catch { return true; }
     }
 
-    // Asks the app to open its dashboard window (the one where sound works without a click); if the app doesn't
-    // answer, opens the dashboard in the default browser instead.
+    // Asks the app to open the dashboard in the default browser; if the app doesn't answer, opens it directly.
     static void Open()
     {
         try
@@ -196,26 +196,95 @@ static class Tray
         Application.Exit();
     }
 
-    // A ✈ in the app's sky blue on a dark round badge, drawn at runtime so there's no .ico file to ship.
+    // The app's icon: a friendly white airplane with an orange tail, banking up and away over a blue sky, with a
+    // contrail and faint radar rings. Drawn at runtime for the tray; `Tray.exe --make-icon <file.ico>` writes the same
+    // picture as installer\icon.ico, which the build puts on the app's .exe and the installer.
     static Icon DrawIcon()
     {
-        var blue = Color.FromArgb(76, 201, 240);
-        using (var bmp = new Bitmap(32, 32))
+        using (var bmp = DrawPlane(32)) return Icon.FromHandle(bmp.GetHicon());
+    }
+
+    static GraphicsPath RoundRect(float x, float y, float w, float h, float r)
+    {
+        var p = new GraphicsPath();
+        p.AddArc(x, y, r * 2, r * 2, 180, 90);
+        p.AddArc(x + w - r * 2, y, r * 2, r * 2, 270, 90);
+        p.AddArc(x + w - r * 2, y + h - r * 2, r * 2, r * 2, 0, 90);
+        p.AddArc(x, y + h - r * 2, r * 2, r * 2, 90, 90);
+        p.CloseFigure();
+        return p;
+    }
+
+    static Bitmap DrawPlane(int size)
+    {
+        var bmp = new Bitmap(size, size);
+        using (var g = Graphics.FromImage(bmp))
         {
-            using (var g = Graphics.FromImage(bmp))
-            using (var dark = new SolidBrush(Color.FromArgb(11, 16, 32)))
-            using (var ring = new Pen(blue, 2))
-            using (var brush = new SolidBrush(blue))
-            using (var font = new Font("Segoe UI Symbol", 19, FontStyle.Bold, GraphicsUnit.Pixel))
-            using (var center = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.ScaleTransform(size / 256f, size / 256f); // everything below is drawn on a 256 x 256 grid
+            using (var badge = RoundRect(6, 6, 244, 244, 58))
+            using (var sky = new LinearGradientBrush(new PointF(0, 0), new PointF(0, 256), Color.FromArgb(108, 196, 245), Color.FromArgb(0, 72, 254)))
             {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                g.FillEllipse(dark, 0, 0, 31, 31);
-                g.DrawEllipse(ring, 1, 1, 29, 29);
-                g.DrawString("✈", font, brush, new RectangleF(0, 1, 32, 32), center);
+                g.FillPath(sky, badge);
+                g.SetClip(badge);
+                using (var ring = new Pen(Color.FromArgb(60, 255, 255, 255), 6))
+                    for (int r = 60; r <= 300; r += 60) g.DrawEllipse(ring, 40 - r, 216 - r, r * 2, r * 2);
+                g.ResetClip();
             }
-            return Icon.FromHandle(bmp.GetHicon());
+            using (var trail = new Pen(Color.FromArgb(215, 255, 255, 255), 13) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                g.DrawBezier(trail, 96, 160, 60, 186, 92, 214, 40, 230);
+
+            // the plane, drawn pointing up around (0, 0), then turned 45 degrees and moved up and to the right
+            g.TranslateTransform(152, 104);
+            g.RotateTransform(45);
+            g.ScaleTransform(0.92f, 0.92f);
+            var wings = new PointF[] { new PointF(0, -14), new PointF(-100, 38), new PointF(-100, 60), new PointF(0, 24), new PointF(100, 60), new PointF(100, 38) };
+            var tail = new PointF[] { new PointF(0, 66), new PointF(-42, 100), new PointF(-42, 112), new PointF(0, 98), new PointF(42, 112), new PointF(42, 100) };
+            using (var shade = new SolidBrush(Color.FromArgb(70, 2, 30, 100)))
+            {
+                g.TranslateTransform(7, 9);
+                g.FillPolygon(shade, wings); g.FillPolygon(shade, tail); g.FillEllipse(shade, -19, -104, 38, 208);
+                g.TranslateTransform(-7, -9);
+            }
+            using (var white = new SolidBrush(Color.White))
+            using (var orange = new SolidBrush(Color.FromArgb(255, 159, 28)))
+            using (var glass = new SolidBrush(Color.FromArgb(76, 201, 240)))
+            using (var engine = new SolidBrush(Color.FromArgb(205, 220, 240)))
+            {
+                g.FillPolygon(orange, tail);
+                g.FillPolygon(white, wings);
+                g.FillEllipse(engine, -62, 22, 22, 36); g.FillEllipse(engine, 40, 22, 22, 36);
+                g.FillEllipse(white, -19, -104, 38, 208);
+                g.FillEllipse(glass, -11, -76, 22, 30);
+            }
+        }
+        return bmp;
+    }
+
+    // Writes the picture as a Windows .ico with PNG pictures at the usual sizes (16 to 256).
+    static void MakeIcon(string file)
+    {
+        int[] sizes = { 16, 24, 32, 48, 64, 128, 256 };
+        var png = new byte[sizes.Length][];
+        for (int i = 0; i < sizes.Length; i++)
+            using (var bmp = DrawPlane(sizes[i]))
+            using (var ms = new MemoryStream())
+            {
+                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                png[i] = ms.ToArray();
+            }
+        using (var w = new BinaryWriter(File.Create(file)))
+        {
+            w.Write((short)0); w.Write((short)1); w.Write((short)sizes.Length);
+            int offset = 6 + 16 * sizes.Length;
+            for (int i = 0; i < sizes.Length; i++)
+            {
+                byte dim = (byte)(sizes[i] == 256 ? 0 : sizes[i]);
+                w.Write(dim); w.Write(dim); w.Write((byte)0); w.Write((byte)0);
+                w.Write((short)1); w.Write((short)32); w.Write(png[i].Length); w.Write(offset);
+                offset += png[i].Length;
+            }
+            foreach (var p in png) w.Write(p);
         }
     }
 }

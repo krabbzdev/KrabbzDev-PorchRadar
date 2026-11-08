@@ -26,3 +26,4 @@ planes-last-seen.json
 browser-window/
 app.log
 app.old.log
+node_modules/

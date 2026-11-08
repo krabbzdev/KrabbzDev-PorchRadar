@@ -1163,11 +1163,10 @@ const server = http.createServer(async (req, res) => {
       return setTimeout(() => process.exit(0), 300);
     }
     if (url.pathname === '/api/open' && req.method === 'POST') {
-      // the tray icon's "Open": same window as when the app starts
+      // the tray icon's "Open": the dashboard in the normal browser
       const local = /^(::1|127\.|::ffff:127\.)/.test(req.socket.remoteAddress || '');
-      const how = req.headers['x-ft-tray']; // '1' = the tray icon or its menu, '2' = the app started a second time
-      if (!local || (how !== '1' && how !== '2')) return send(res, 403, '{"error":"forbidden"}');
-      openDashboard(how === '1' && settings.trayOpen === 'browser'); // Settings > Display > Tray icon
+      if (!local || req.headers['x-ft-tray'] !== '1') return send(res, 403, '{"error":"forbidden"}');
+      openDashboard();
       return send(res, 200, '{"ok":true}');
     }
     const tk = url.pathname.match(/^\/api\/track\/([0-9a-f~]{6,7})$/i);
@@ -1190,7 +1189,6 @@ const server = http.createServer(async (req, res) => {
         }
         if ('aisKey' in b) { settings.aisKey = String(b.aisKey || '').trim().slice(0, 100); setTimeout(watchConnect, 2000); }
         if ('aeroKey' in b) { settings.aeroKey = String(b.aeroKey || '').trim().slice(0, 100); aeroCache.clear(); }
-        if ('trayOpen' in b) settings.trayOpen = b.trayOpen === 'browser' ? 'browser' : 'window';
         if ('lanAccess' in b &&!!b.lanAccess !== !!settings.lanAccess) { settings.lanAccess = !!b.lanAccess; setTimeout(relisten, 500); }
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
         aisRefresh();
@@ -1207,7 +1205,6 @@ const server = http.createServer(async (req, res) => {
         aisKeySet: !!aisKey(), aisKeyHint: aisKey() && isLocalReq(req) ? '••••' + aisKey().slice(-4) : '',
         lanAccess: !!settings.lanAccess, lanUrls: lanUrls(), thisPc: isLocalReq(req),
         localUrl: `http://localhost:${PORT}`, networkUrls: isLocalReq(req) ? networkUrls() : [],
-        trayOpen: settings.trayOpen === 'browser' ? 'browser' : 'window',
       }));
     }
     if (url.pathname === '/api/version') return send(res, 200, JSON.stringify({ ...VERSION, exe: !!sea }));
@@ -1317,45 +1314,8 @@ const openBrowser = () => {
   if (process.env.NO_BROWSER || process.argv.includes('--background')) return;
   openDashboard();
 };
-// The dashboard always opens in its own app window (Edge, else Chrome; a normal browser tab only if neither is
-// installed). Browsers normally block a page's sound until it is clicked, but this window may play it straight away.
-// It uses its own browser profile in the app's folder, because that flag only applies to a browser that isn't already
-// running with your normal profile. Edge's natural online voices do not work there, so Kokoro or the Windows voices speak.
-const BROWSER_PROFILE = path.join(APP_DIR, 'browser-window');
-function appBrowser() {
-  const bases = [process.env['ProgramFiles(x86)'], process.env.ProgramFiles, process.env.LOCALAPPDATA].filter(Boolean);
-  for (const rel of ['Microsoft\\Edge\\Application\\msedge.exe', 'Google\\Chrome\\Application\\chrome.exe'])
-    for (const base of bases) { const p = path.join(base, rel); if (fs.existsSync(p)) return p; }
-  return null;
-}
-// Only ever one dashboard window: if the app window (the one whose title is exactly the page title) is already
-// open, even minimized, it is brought forward instead of opening another.
-const FOCUS_PS = `$p = Get-Process | Where-Object { $_.MainWindowTitle -eq $env:PR_TITLE -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1
-if (-not $p) { exit 1 }
-Add-Type 'using System;using System.Runtime.InteropServices;public class PrWin{[DllImport("user32.dll")]public static extern bool ShowWindow(IntPtr h,int c);[DllImport("user32.dll")]public static extern bool SetForegroundWindow(IntPtr h);}'
-[PrWin]::ShowWindow($p.MainWindowHandle, 9) | Out-Null
-[PrWin]::SetForegroundWindow($p.MainWindowHandle) | Out-Null`;
-let openingWindow = false;
-function openDashboard(inBrowser) {
-  const url = `http://localhost:${PORT}/`, cp = require('child_process');
-  if (inBrowser) return cp.exec(`start "" ${url}`);
-  const exe = process.platform === 'win32' ? appBrowser() : null;
-  const open = () => {
-    if (exe) {
-      try {
-        cp.spawn(exe, ['--app=' + url, '--user-data-dir=' + BROWSER_PROFILE, '--autoplay-policy=no-user-gesture-required',
-          '--no-first-run', '--no-default-browser-check', '--window-size=1500,950'], { detached: true, stdio: 'ignore' }).unref();
-        return;
-      } catch (e) { console.log('Could not open the app window: ' + e.message); }
-    }
-    cp.exec(`start "" ${url}`);
-  };
-  if (!exe) return open();
-  if (openingWindow) return; // a second click while the first window is still starting
-  openingWindow = true; setTimeout(() => { openingWindow = false; }, 6000);
-  cp.execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', FOCUS_PS],
-    { windowsHide: true, timeout: 10000, env: { ...process.env, PR_TITLE: "KrabbzDev's Porch Radar" } }, err => { if (err) open(); });
-}
+// Opens the dashboard in the user's normal browser.
+function openDashboard() { require('child_process').exec(`start "" http://localhost:${PORT}/`); }
 // ---------- ships: live AIS positions from AISStream.io (optional, needs a free API key) ----------
 // AISStream only accepts server connections (never straight from a browser), so this keeps one WebSocket open for
 // the area around home and the page reads /api/ships. Ships report positions over AIS, the ship version of ADS-B.
@@ -1821,7 +1781,7 @@ function emailDebugReport() {
 // ---------- settings for the tray icon's Settings menu ----------
 // The dashboard sends its list of settings (anything marked data-pref on the page) with their current values; the
 // tray reads the list to build its menu and sends back what's picked; open dashboards apply those changes. The
-// app's own settings (updates, network access, own window) are listed and changed here directly. The page's list
+// app's own settings (updates and network access) are listed and changed here directly. The page's list
 // is kept in settings.json so the tray menu is complete even before a dashboard has been opened.
 let prefSeq = 0;
 const trayChanges = []; // { seq, at, key, value }: the last 100 changes picked in the tray
@@ -1890,9 +1850,9 @@ server.on('error', e => {
   // Some other program using the port: move to the next free one (then any port Windows picks) and remember it.
   isOurApp(PORT).then(ours => {
     if (ours) {
-      console.log('Already running - showing its window.');
+      console.log('Already running - opening its dashboard.');
       if (sea && !process.argv.includes('--background') && !process.env.NO_BROWSER) { // the running copy opens or raises the one window
-        const r = http.request({ host: '127.0.0.1', port: PORT, path: '/api/open', method: 'POST', headers: { 'x-ft-tray': '2' } });
+        const r = http.request({ host: '127.0.0.1', port: PORT, path: '/api/open', method: 'POST', headers: { 'x-ft-tray': '1' } });
         r.on('error', () => {}); r.end();
       }
       return setTimeout(() => process.exit(0), 1500);
@@ -1921,5 +1881,5 @@ function startedUp() {
   }
   aisConnect();
   console.log(`KrabbzDev's Porch Radar v${VERSION.version} build ${VERSION.build} running at http://localhost:${PORT}${settings.lanAccess ? ' and ' + lanUrls().join(', ') : ''}`);
-  if (sea) { console.log('To stop it, close this window or right-click the plane icon in the system tray and choose Quit.'); openBrowser(); startTray(); }
+  if (sea) { console.log('To stop it, right-click the plane icon in the system tray and choose Quit.'); openBrowser(); startTray(); }
 }

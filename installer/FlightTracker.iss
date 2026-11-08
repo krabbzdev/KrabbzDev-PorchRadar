@@ -27,6 +27,7 @@ DefaultDirName={%PUBLIC|C:\Users\Public}\Apps\Krabbz9999-FlightTracker
 DisableDirPage=auto
 DisableProgramGroupPage=yes
 UsePreviousAppDir=yes
+SetupIconFile=icon.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName=KrabbzDev-PorchRadar
 OutputDir=..\dist
@@ -54,6 +55,8 @@ Name: "{userdesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app
 Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExe}"; Parameters: "--background"; WorkingDir: "{app}"; Flags: runminimized; Tasks: startup
 
 [InstallDelete]
+; the old dashboard window's own browser profile (no longer used)
+Type: filesandordirs; Name: "{app}\browser-window"
 ; the app used to be called "Krabbz9999 - FlightTracker": remove shortcuts under the old name when upgrading
 Type: files; Name: "{userprograms}\Krabbz9999 - FlightTracker.lnk"
 Type: files; Name: "{userdesktop}\Krabbz9999 - FlightTracker.lnk"
