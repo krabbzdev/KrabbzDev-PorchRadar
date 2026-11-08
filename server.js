@@ -14,6 +14,14 @@ const path = require('path');
 // files like the airport cache live next to the .exe instead of next to this script.
 let sea = null;
 try { sea = require('node:sea'); if (!sea.isSea()) sea = null; } catch (e) {}
+// The exe is a console program, so Windows opens a console window for it. Start again hidden (the tray icon and the
+// dashboard window are all anyone needs) and let this visible copy go.
+if (sea && process.platform === 'win32' && !process.env.FT_HIDDEN) {
+  try {
+    require('child_process').spawn(process.execPath, process.argv.filter(a => a.startsWith('--')), { detached: true, stdio: 'ignore', windowsHide: true, env: { ...process.env, FT_HIDDEN: '1' } }).unref();
+    process.exit(0);
+  } catch (e) {}
+}
 const APP_DIR = sea ? path.dirname(process.execPath) : __dirname;
 const indexHtml = () => sea ? Buffer.from(sea.getAsset('index.html')) : fs.readFileSync(path.join(__dirname, 'index.html'));
 // version + build number, bumped by build-exe.cmd on every build and baked into the .exe
@@ -1729,7 +1737,7 @@ async function applyUpdate() {
     fs.renameSync(exe, old);
     fs.renameSync(fresh, exe);
     saveLog();
-    require('child_process').spawn(exe, [], { detached: true, stdio: 'ignore', cwd: APP_DIR, env: { ...process.env, FT_RESTART: '1', NO_BROWSER: '1' } }).unref();
+    require('child_process').spawn(exe, [], { detached: true, stdio: 'ignore', windowsHide: true, cwd: APP_DIR, env: { ...process.env, FT_RESTART: '1', FT_HIDDEN: '1', NO_BROWSER: '1' } }).unref();
     console.log('Update installed - restarting.');
     setTimeout(() => process.exit(0), 500);
   } catch (e) {
