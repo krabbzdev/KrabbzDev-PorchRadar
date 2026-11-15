@@ -5,6 +5,6 @@
   "assets": {
     "index.html": "index.html",
     "version.json": "version.json",
-    "tray.exe": "build/Krabbz9999-FlightTracker-Tray.exe"
+    "tray.exe": "build/KrabbzDev-PorchRadar-Tray.exe"
   }
 }

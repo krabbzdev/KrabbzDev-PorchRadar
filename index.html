@@ -2977,7 +2977,7 @@ async function openReg(hex, reg) {
   const src = F
     ? `<div class="rg-src">Source: FAA Aircraft Registry database (file from ${F.fileDate}). Street addresses are intentionally not shown.</div>`
     : isUS && !r.faaLoaded
-      ? `<div class="rg-src hint">Showing owner data from the live feed. For the full FAA record (co-owners, city/state, serial number, registration dates), download <a href="https://registry.faa.gov/database/ReleasableAircraft.zip" target="_blank" rel="noopener">ReleasableAircraft.zip</a> from the FAA (about 60 MB), put it in the same folder as Krabbz9999-FlightTracker.exe, and restart it. Or use the FAA Registry link below.</div>`
+      ? `<div class="rg-src hint">Showing owner data from the live feed. For the full FAA record (co-owners, city/state, serial number, registration dates), download <a href="https://registry.faa.gov/database/ReleasableAircraft.zip" target="_blank" rel="noopener">ReleasableAircraft.zip</a> from the FAA (about 60 MB), put it in the app's folder (the one holding its .exe), and restart it. Or use the FAA Registry link below.</div>`
       : isUS ? `<div class="rg-src">Not found in the FAA file (it may be newly registered or recently changed). Try the FAA Registry link below.</div>`
       : `<div class="rg-src">Non-US registration; the FAA registry only covers N-numbers. Owner shown is from the live feed.</div>`;
   $('regBody').innerHTML = `

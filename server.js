@@ -1725,9 +1725,11 @@ const isLiveShip = mmsi => { const s = ships.get(mmsi); return s && s.lat != nul
 setTimeout(() => { loadAirports().catch(() => {}); loadAirportDetails().catch(e => console.log('Airport details not loaded: ' + e.message)); buildFleet().catch(e => console.log('Cruise fleet list not built: ' + e.message)); }, 5000);
 
 // ---------- self-update from GitHub Releases (only when running as the .exe) ----------
-// Each release carries Krabbz9999-FlightTracker.exe; the tag ends in the build number (e.g. v1.0.4).
+// Each release carries KrabbzDev-PorchRadar.exe; the tag ends in the build number (e.g. v1.0.4). Until build 72.8 the
+// files were called Krabbz9999-FlightTracker*: releases still carry the .exe under that name too, so older copies
+// keep updating, and a copy installed under the old name keeps its file name (the update replaces it in place).
 const REPO = VERSION.repo || 'krabbzdev/KrabbzDev-PorchRadar';
-const EXE_NAME = 'Krabbz9999-FlightTracker.exe';
+const EXE_NAME = 'KrabbzDev-PorchRadar.exe', OLD_EXE_NAME = 'Krabbz9999-FlightTracker.exe';
 let updateState = { checkedAt: null, latest: null, available: false, status: 'idle', error: null };
 // "v1.0.67.2" -> "67.2", "v1.0.67" -> 67
 const buildOf = tag => { const m = String(tag || '').trim().match(/^v?\d+\.\d+\.(\d+)(?:\.(\d+))?$/); return !m ? 0 : m[2] ? `${m[1]}.${m[2]}` : +m[1]; };
@@ -1741,7 +1743,7 @@ async function checkForUpdate() {
     if (r.status === 404) throw new Error('No releases published yet');
     if (r.status !== 200) throw new Error(`GitHub answered HTTP ${r.status}`);
     const rel = JSON.parse(r.body);
-    const asset = (rel.assets || []).find(a => a.name === EXE_NAME);
+    const asset = (rel.assets || []).find(a => a.name === EXE_NAME) || (rel.assets || []).find(a => a.name === OLD_EXE_NAME);
     const latest = buildOf(rel.tag_name);
     updateState = { ...updateState, checkedAt: Date.now(), error: null,
       latest: { build: latest, tag: rel.tag_name, url: rel.html_url, notes: (rel.body || '').slice(0, 2000) },
@@ -1796,7 +1798,8 @@ if (sea) {
 // Node has no tray support, so the .exe carries a tiny helper (tray/Tray.cs, compiled at build time)
 // that shows a ✈ icon with Open / Quit. It's unpacked next to the app and closes itself when this
 // process exits (including when an update restarts it; the new copy starts its own).
-const TRAY_EXE = path.join(APP_DIR, 'Krabbz9999-FlightTracker-Tray.exe');
+const TRAY_EXE = path.join(APP_DIR, 'KrabbzDev-PorchRadar-Tray.exe');
+setTimeout(() => { try { fs.unlinkSync(path.join(APP_DIR, 'Krabbz9999-FlightTracker-Tray.exe')); } catch (e) {} }, 15000); // the helper's name before build 72.8
 function startTray(tries = 0) {
   if (!sea || process.platform !== 'win32' || process.env.NO_TRAY) return;
   let bin;

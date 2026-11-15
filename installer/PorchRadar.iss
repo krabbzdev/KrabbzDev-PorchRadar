@@ -1,13 +1,13 @@
 ; Installer for KrabbzDev's Porch Radar (Inno Setup 6, https://jrsoftware.org/isinfo.php).
-; Installs for the current user WITHOUT admin rights, into C:\Users\Public\Apps\Krabbz9999-FlightTracker.
+; Installs for the current user WITHOUT admin rights, into C:\Users\Public\Apps\KrabbzDev-PorchRadar.
 ; Built by GitHub Actions on every release (.github/workflows/release.yml):
-;   ISCC.exe /DAppVersion=1.0.44 installer\FlightTracker.iss   ->   dist\Krabbz9999-FlightTracker-Setup.exe
+;   ISCC.exe /DAppVersion=1.0.44 installer\PorchRadar.iss   ->   dist\KrabbzDev-PorchRadar-Setup.exe
 ; The app keeps its settings and data next to the .exe, which is why it goes in a folder the user can write to,
 ; and it updates itself in place from GitHub Releases after that.
 
 #define AppName "KrabbzDev's Porch Radar"
-#define AppExe "Krabbz9999-FlightTracker.exe"
-#define TrayExe "Krabbz9999-FlightTracker-Tray.exe"
+#define AppExe "KrabbzDev-PorchRadar.exe"
+#define TrayExe "KrabbzDev-PorchRadar-Tray.exe"
 #ifndef AppVersion
   #define AppVersion "1.0"
 #endif
@@ -23,7 +23,7 @@ AppSupportURL=https://github.com/krabbzdev/KrabbzDev-PorchRadar/wiki
 AppUpdatesURL=https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases
 ; no admin: installs for this user only, into the shared Public folder (writable without admin)
 PrivilegesRequired=lowest
-DefaultDirName={%PUBLIC|C:\Users\Public}\Apps\Krabbz9999-FlightTracker
+DefaultDirName={%PUBLIC|C:\Users\Public}\Apps\KrabbzDev-PorchRadar
 DisableDirPage=auto
 DisableProgramGroupPage=yes
 UsePreviousAppDir=yes
@@ -31,7 +31,7 @@ SetupIconFile=icon.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName=KrabbzDev-PorchRadar
 OutputDir=..\dist
-OutputBaseFilename=Krabbz9999-FlightTracker-Setup
+OutputBaseFilename=KrabbzDev-PorchRadar-Setup
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -55,6 +55,11 @@ Name: "{userdesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app
 Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExe}"; Parameters: "--background"; WorkingDir: "{app}"; Flags: runminimized; Tasks: startup
 
 [InstallDelete]
+; the app's own files were called Krabbz9999-FlightTracker* before build 72.8: remove them when upgrading
+Type: files; Name: "{app}\Krabbz9999-FlightTracker.exe"
+Type: files; Name: "{app}\Krabbz9999-FlightTracker.exe.old"
+Type: files; Name: "{app}\Krabbz9999-FlightTracker.exe.new"
+Type: files; Name: "{app}\Krabbz9999-FlightTracker-Tray.exe"
 ; the old dashboard window's own browser profile (no longer used)
 Type: filesandordirs; Name: "{app}\browser-window"
 ; the app used to be called "Krabbz9999 - FlightTracker": remove shortcuts under the old name when upgrading
@@ -72,7 +77,7 @@ Filename: "{app}\{#AppExe}"; Description: "Start {#AppName} now"; WorkingDir: "{
 [UninstallRun]
 ; stop the app and its tray icon so their files can be removed: only the ones running FROM THIS FOLDER
 ; (matching by name alone would also close a separate copy running somewhere else)
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -NonInteractive -Command ""Get-Process -Name 'Krabbz9999-FlightTracker','Krabbz9999-FlightTracker-Tray' -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -like '{app}\*' } | Stop-Process -Force"""; Flags: runhidden waituntilterminated; RunOnceId: "StopApp"
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -NonInteractive -Command ""Get-Process -Name 'KrabbzDev-PorchRadar','KrabbzDev-PorchRadar-Tray','Krabbz9999-FlightTracker','Krabbz9999-FlightTracker-Tray' -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -like '{app}\*' } | Stop-Process -Force"""; Flags: runhidden waituntilterminated; RunOnceId: "StopApp"
 
 [UninstallDelete]
 ; files the app creates itself. Your settings, daily log, cruise sightings and FAA data are left in place,
@@ -88,3 +93,18 @@ Type: files; Name: "{app}\app.old.log"
 ; the dashboard window's own browser profile (cache and page settings)
 Type: filesandordirs; Name: "{app}\browser-window"
 Type: files; Name: "{app}\cruise-fleet.json"
+
+[Code]
+// A copy installed before build 72.8 runs as Krabbz9999-FlightTracker.exe, a file this installer does not replace, so
+// Windows would not close it for us. Stop the app and its tray helper (old or new names) when they run from this
+// folder, so the new files go in and the old ones can be removed.
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  rc: Integer;
+begin
+  Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -NonInteractive -Command "Get-Process -Name ''KrabbzDev-PorchRadar'',''KrabbzDev-PorchRadar-Tray'',''Krabbz9999-FlightTracker'',''Krabbz9999-FlightTracker-Tray'' -ErrorAction SilentlyContinue | Where-Object { $_.Path -like ''' + ExpandConstant('{app}') + '\*'' } | Stop-Process -Force"',
+    '', SW_HIDE, ewWaitUntilTerminated, rc);
+  Sleep(800);
+  Result := '';
+end;

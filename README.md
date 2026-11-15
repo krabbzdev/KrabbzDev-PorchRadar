@@ -1,6 +1,6 @@
 # KrabbzDev's Porch Radar
 
-[![Install now](https://img.shields.io/badge/Install_now-Windows_installer-0048FE?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases/latest/download/Krabbz9999-FlightTracker-Setup.exe)
+[![Install now](https://img.shields.io/badge/Install_now-Windows_installer-0048FE?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases/latest/download/KrabbzDev-PorchRadar-Setup.exe)
 
 By **Charles Love** (Krabbz9999).
 
@@ -10,11 +10,11 @@ when a plane passes right overhead.
 
 ## Install
 
-1. Download **`Krabbz9999-FlightTracker-Setup.exe`** from the [latest release](../../releases/latest) and run it.
+1. Download **`KrabbzDev-PorchRadar-Setup.exe`** from the [latest release](../../releases/latest) and run it.
    - Windows may say *"Windows protected your PC"* because the app isn't code-signed.
      Click **More info → Run anyway**.
    - It installs for you only, **without admin rights**, into
-     `C:\Users\Public\Apps\Krabbz9999-FlightTracker`, with a Start menu entry. Optional: a desktop
+     `C:\Users\Public\Apps\KrabbzDev-PorchRadar`, with a Start menu entry. Optional: a desktop
      shortcut, and starting with Windows (in the tray, without opening the browser).
 2. Your browser opens the dashboard at `http://localhost:8090`. The first time, it asks for your
    **ZIP code or address**. That's it.
@@ -23,7 +23,7 @@ Nothing else to install: no Node.js, no accounts. The dashboard opens only on th
 unless you turn on **Settings → Network** to let phones and tablets on your home Wi-Fi watch it too. To stop it, right-click the ✈ tray icon → **Quit**. To uninstall, use Windows
 **Settings → Apps** (your settings and log are left in the install folder; delete it to remove them).
 
-The plain `Krabbz9999-FlightTracker.exe` is in each release too: it's what installed copies update
+The plain `KrabbzDev-PorchRadar.exe` is in each release too: it's what installed copies update
 themselves from, and it still runs on its own from any folder.
 
 ## Support
@@ -110,7 +110,7 @@ Needs [Node.js](https://nodejs.org) 22+ (24 recommended).
 
 ```bat
 node server.js        rem run from source at http://localhost:8090
-build-exe.cmd         rem build Krabbz9999-FlightTracker.exe locally, for testing (and the installer, if Inno Setup 6 is installed)
+build-exe.cmd         rem build KrabbzDev-PorchRadar.exe locally, for testing (and the installer, if Inno Setup 6 is installed)
 release.cmd "notes"   rem bump the build number, tag and push; GitHub builds and publishes the release
 ```
 

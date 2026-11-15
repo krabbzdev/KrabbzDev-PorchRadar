@@ -1,12 +1,12 @@
 // System tray icon for KrabbzDev's Porch Radar.
 // Node.js can't show a tray icon, so the app carries this tiny helper inside its .exe and starts it.
-// Usage: Krabbz9999-FlightTracker-Tray.exe <port> <app process id> <tooltip>
-//        Krabbz9999-FlightTracker-Tray.exe --email <file> <subject>   (the app's "Email debug log": a new email with the file attached)
+// Usage: KrabbzDev-PorchRadar-Tray.exe <port> <app process id> <tooltip>
+//        KrabbzDev-PorchRadar-Tray.exe --email <file> <subject>   (the app's "Email debug log": a new email with the file attached)
 // Left-click or "Open Porch Radar" opens the dashboard; "Check for updates" asks the app to look for a newer build
 // on GitHub and install it; "Email debug log..." asks the app to gather its log and email it; "Quit" asks the app
 // to save and exit.
 // The helper closes itself as soon as the app's process is gone (including when an update restarts it).
-// Build: csc /target:winexe /out:build\Krabbz9999-FlightTracker-Tray.exe tray\Tray.cs
+// Build: csc /target:winexe /out:build\KrabbzDev-PorchRadar-Tray.exe tray\Tray.cs
 using System;
 using System.Diagnostics;
 using System.Drawing;
