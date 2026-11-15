@@ -2476,7 +2476,21 @@ async function sayKokoro(text, voice, ready) {
 // time and played the moment it arrives.
 const prepared = new Map(); // hex -> { voice, text, at, blob: Promise<Blob|null> }
 const sameWords = (x, y) => x.replace(/\d[\d,]*/g, '#') === y.replace(/\d[\d,]*/g, '#'); // speed and altitude drift a little
+// Only one open dashboard page makes the sounds (the server picks it), so extra tabs and windows don't say everything twice.
+// If the server can't be reached the page speaks anyway.
+var isSpeaker = true;
+const pageId = Math.random().toString(36).slice(2, 12);
+async function claimSpeaker() {
+  try {
+    const r = await fetch('/api/speaker', { method: 'POST', body: JSON.stringify({ id: pageId, vis: document.visibilityState === 'visible' }) }).then(x => x.json());
+    isSpeaker = !!r.owner;
+  } catch (e) { isSpeaker = true; }
+}
+claimSpeaker();
+setInterval(claimSpeaker, 3000);
+document.addEventListener('visibilitychange', claimSpeaker);
 function prepareAnnouncement(a) {
+  if (!isSpeaker) return;
   const voice = kokoroVoice();
   if (!soundOn || !voice || failedVoices.has('kokoro:' + voice)) return;
   const text = announcementText(a), p = prepared.get(a.hex);
@@ -2562,7 +2576,7 @@ function fillSay(template, value) {
 const announcementText = a => fillSay(sayTemplate, k => SAY_TAGS[k][1](a));
 
 function alertSound(hex) {
-  if (!soundOn) return;
+  if (!soundOn || !isSpeaker) return;
   unlockAudio();
   const played = chime();
   if (!played) showSoundLock(true); // the browser hasn't been clicked yet: ask for one
@@ -4243,7 +4257,7 @@ function demoTick() {
 
 // ---------- a short spoken line with the chosen voice (watch list and emergencies) ----------
 function speak(text) {
-  if (!soundOn) return;
+  if (!soundOn || !isSpeaker) return;
   chime();
   if (kokoroVoice() && !failedVoices.has(voiceName)) sayKokoro(text, kokoroVoice()); else say(text);
 }

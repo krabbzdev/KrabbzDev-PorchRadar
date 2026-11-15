@@ -59,6 +59,7 @@ const contactSetting = () => 'contact' in settings ? settings.contact : DEFAULT_
 
 const lookupCache = new Map(); // hex|callsign -> {photo, info, flight}
 const firstSeen = new Map();   // hex -> {first, last} (ms)
+let speaker = null; // { id, at, score }: the dashboard page that makes the sounds (/api/speaker)
 const posLog = [], POS_LOG_MS = 3 * 3600e3; // [hex, lat, lon, alt, time, label] of every plane for the last 3 hours: map trails and replay
 const trackHist = new Map();   // hex -> [[lat, lon, alt, time], ...] while the aircraft is in range
 
@@ -1133,6 +1134,15 @@ const server = http.createServer(async (req, res) => {
         return send(res, 200, '{"ok":true}');
       }
       return send(res, 200, JSON.stringify({ prefs: [...(settings.pagePrefs || []), ...appPrefs()] }));
+    }
+    if (url.pathname === '/api/speaker' && req.method === 'POST') {
+      // Only one dashboard page should speak and chime, however many are open (tabs, windows, phones). Each page asks
+      // every few seconds; the one holding the lease is "the speaker". A visible page beats a hidden one, and one on
+      // this PC beats one on another device; otherwise the first page keeps it until it stops asking (8 s).
+      const b = JSON.parse(await readBody(req) || '{}'), now = Date.now(), id = String(b.id || '').slice(0, 40);
+      const score = (b.vis ? 2 : 0) + (isLocalReq(req) ? 1 : 0);
+      if (id && (!speaker || speaker.id === id || now - speaker.at > 8000 || score > speaker.score)) speaker = { id, at: now, score };
+      return send(res, 200, JSON.stringify({ owner: !!id && speaker.id === id }));
     }
     if (url.pathname === '/api/mirror') { // this PC's copy of the dashboard's saved choices (the page's save() in index.html)
       if (!isLocalReq(req)) return send(res, 403, '{}'); // phones and tablets keep their own
