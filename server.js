@@ -95,6 +95,21 @@ async function airportDataPhoto(reg, hex) {
   } catch (e) { return null; }
 }
 
+// Up to 5 photos of one plane from Airport-Data.com, for the photo strip on the overhead close-up. Kept an hour.
+const photosCache = new Map();
+async function morePhotos(reg, hex) {
+  const key = reg || hex, hit = photosCache.get(key);
+  if (hit && Date.now() - hit.at < 3600e3) return hit.data;
+  let data = [];
+  try {
+    const r = await get('https://airport-data.com/api/ac_thumb.json?n=5&' + (reg ? 'r=' + encodeURIComponent(reg) : 'm=' + hex.toUpperCase()));
+    if (r.status === 200) data = (JSON.parse(r.body).data || []).filter(p => String(p.image).startsWith('https://') && String(p.link).startsWith('https://'))
+      .map(p => ({ src: p.image, link: p.link, credit: p.photographer || 'Airport-Data.com' }));
+  } catch (e) { return hit ? hit.data : []; }
+  photosCache.set(key, { at: Date.now(), data });
+  if (photosCache.size > 300) photosCache.delete(photosCache.keys().next().value);
+  return data;
+}
 // Tail numbers get reused too (N865PA was a DHL A300 before it was a Cessna 172), so check the photo's
 // Planespotters link (".../n865pa-dhl-aviation-airbus-a300b4-203") names the same maker as the live aircraft.
 const MAKERS = ['airbus', 'boeing', 'cessna', 'piper', 'embraer', 'bombardier', 'canadair', 'cirrus', 'beech', 'hawker', 'gulfstream',
@@ -498,6 +513,11 @@ async function refreshAircraft() {
     // first position we heard, used by the page to work out where a local flight departed from
     if (!f.pos && a.lat != null) f.pos = [a.lat, a.lon, a.alt_baro ?? null];
     rememberPlane(a, now);
+    { // count this as one more visit, once per time in range, and tell the page how many there have been
+      const seen = planesSeen[String(a.hex).toLowerCase()];
+      if (seen && !f.counted) { f.counted = true; seen.n = (seen.n || 0) + 1; }
+      if (seen && seen.n) a.vis = seen.n;
+    }
     a.first_seen = f.first;
     if (f.nw) a.nw = 1; // not seen here in the last 30 days (planes-last-seen.json)
     a.first_pos = f.pos;
@@ -563,7 +583,7 @@ function rememberPlane(a, now) {
   if (a.lat == null || (a.seen_pos ?? 0) > 60 || !/^[0-9a-f]{6}$/i.test(a.hex || '')) return;
   const hex = a.hex.toLowerCase(), old = planesSeen[hex] || {};
   planesSeen[hex] = { reg: a.r || old.reg || '', flight: (a.flight || '').trim() || old.flight || '', type: a.t || old.type || '', desc: a.desc || old.desc || '',
-    owner: a.ownOp || old.owner || '', lat: +a.lat.toFixed(4), lon: +a.lon.toFixed(4), alt: a.alt_baro ?? null, gs: a.gs ?? null, track: a.track ?? null,
+    n: old.n || 0, owner: a.ownOp || old.owner || '', lat: +a.lat.toFixed(4), lon: +a.lon.toFixed(4), alt: a.alt_baro ?? null, gs: a.gs ?? null, track: a.track ?? null,
     seen: now - Math.round((a.seen_pos || 0) * 1000) };
   planesSeenDirty = true;
 }
@@ -1278,6 +1298,11 @@ const server = http.createServer(async (req, res) => {
         if (b.install) applyUpdate().catch(() => {});
       }
       return send(res, 200, JSON.stringify({ current: VERSION, exe: !!sea, autoUpdate: autoUpdate(), repo: REPO, ...updateState }));
+    }
+    if (url.pathname === '/api/photos') { // more photos of one plane (the overhead close-up's photo strip)
+      const hex = (url.searchParams.get('hex') || '').toLowerCase(), reg = (url.searchParams.get('reg') || '').toUpperCase();
+      if (!/^[0-9a-f]{6}$/.test(hex) || !/^[A-Z0-9-]{0,10}$/.test(reg)) return send(res, 400, '[]');
+      return send(res, 200, JSON.stringify(await morePhotos(reg, hex)));
     }
     if (url.pathname === '/api/log') return send(res, 200, JSON.stringify(logSummary()));
     if (url.pathname === '/api/log.csv') { // today's log as a spreadsheet file (Today's log > CSV)

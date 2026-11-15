@@ -331,6 +331,30 @@
   .to-apt.big { padding: 6px 14px 7px; border-width: 3px; }
   .to-apt.big b { font-size: 20px; }
   .to-apt.big span { font-size: 12px; }
+  /* the extra sections on the close-up: route, more photos, about, size, wind */
+  .to-h { margin: 18px 0 6px; font: 700 10.5px Inter, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .to-rt { margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); }
+  .to-rt .ends { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--muted); }
+  .to-rt .ends span:last-child { text-align: right; }
+  .to-rt .ends b { display: block; font: 700 20px var(--mono); color: var(--text); }
+  .to-rt .bar { position: relative; height: 4px; margin: 12px 8px 10px; border-radius: 2px; background: var(--line); }
+  .to-rt .bar i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+  .to-rt .bar em { position: absolute; top: -9px; translate: -50% 0; font-style: normal; font-size: 16px; color: var(--accent); transform: rotate(45deg); }
+  .to-rt small { color: var(--muted); font-size: 11px; }
+  .to-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .to-strip a { position: relative; display: block; border-radius: 8px; overflow: hidden; background: var(--thumb-bg); aspect-ratio: 4 / 3; }
+  .to-strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .to-strip span { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 5px; font-size: 9px; color: #fff; background: rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .to-tbl { width: 100%; font-size: 13px; border-collapse: collapse; }
+  .to-tbl th { text-align: left; font-weight: 500; color: var(--muted); padding: 3px 10px 3px 0; white-space: nowrap; vertical-align: top; width: 1%; }
+  .to-tbl td { padding: 3px 0; }
+  .to-tbl small { color: var(--muted); }
+  .to-size .sz { display: grid; grid-template-columns: 78px minmax(0, 1fr) 50px; align-items: center; gap: 8px; font-size: 12px; margin: 4px 0; }
+  .to-size .sz span { color: var(--muted); }
+  .to-size .sz i { display: block; height: 10px; border-radius: 5px; background: var(--accent); }
+  .to-size .sz i.bus { background: #ffb547; }
+  .to-size .sz b { font: 600 12px var(--mono); text-align: right; }
+  .to-size small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
   /* the instrument panel on the close-up */
   .to-inst { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 14px; padding: 12px 8px 10px; border-radius: 14px; background: linear-gradient(180deg, #10151f, #05080e); border: 1px solid #2a3350; box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
   .to-inst figure { margin: 0; text-align: center; min-width: 0; }
@@ -2086,6 +2110,8 @@ function normalize(raw) {
     flags: (raw.dbFlags || 0) & 3, // 1 = military, 2 = interesting; privacy flags (4, 8) deliberately ignored
     year: raw.year || null,
     category: raw.category || '',
+    ws: raw.ws ?? null, wd: raw.wd ?? null, oat: raw.oat ?? null, // wind and outside temperature, when the plane reports them
+    visits: raw.vis || 0,
   };
 }
 
@@ -2843,7 +2869,68 @@ function drawTakeover(a) {
         <div><div class="k">Squawk${infoBtn('Squawk')}</div><div class="v">${squawkTxt(a.squawk) || '—'}</div>${infoText('Squawk')}</div>
         <div><div class="k">Tracked${infoBtn('Tracked')}</div><div class="v">${trackedFor(a) || '—'}</div>${infoText('Tracked')}</div>
       </div>
+      ${toExtras(a)}
     </div>`;
+}
+
+// ---------- more on the overhead close-up: extra photos, the route, about the aircraft, its size, and the wind ----------
+// Extra photos of this exact plane from Airport-Data.com (credit and link on each), fetched once per plane.
+const morePhotos = new Map(); // hex -> [{ src, link, credit }] | 'pending'
+function photosFor(a) {
+  const got = morePhotos.get(a.hex);
+  if (got) return got === 'pending' ? [] : got;
+  morePhotos.set(a.hex, 'pending');
+  fetch(`/api/photos?hex=${a.hex}&reg=${encodeURIComponent(a.reg || look(a.hex).info?.reg || '')}`).then(r => r.ok ? r.json() : []).catch(() => [])
+    .then(list => { morePhotos.set(a.hex, list); if (toHex === a.hex) { const now = current.find(x => x.hex === a.hex); if (now) drawTakeover(now); } });
+  return [];
+}
+// Rough length and wingspan in feet by type code, for the size comparison. shortcut: a hand-made list of the common
+// types (about 75); a type that isn't here simply shows no comparison. Swap for a data source if one turns up.
+const PLANE_SIZE = { C152: [24, 33], C172: [27, 36], C182: [29, 36], C208: [38, 52], P28A: [24, 30], PA32: [28, 36], PA34: [29, 39], PA44: [28, 39], SR20: [26, 38], SR22: [26, 38],
+  BE36: [27, 33], BE58: [30, 38], BE9L: [36, 50], BE20: [44, 55], B350: [47, 58], PC12: [47, 53], TBM9: [35, 42], C25A: [47, 47], C25B: [51, 53], C525: [43, 47], C560: [49, 52],
+  C56X: [52, 56], C680: [63, 72], C68A: [63, 72], C750: [72, 64], LJ45: [58, 48], LJ60: [59, 44], LJ75: [58, 51], CL30: [69, 64], CL35: [69, 69], CL60: [68, 64], E50P: [42, 40],
+  E55P: [52, 52], F900: [66, 63], FA7X: [76, 86], F2TH: [66, 70], GLF4: [88, 78], GLF5: [96, 94], GLF6: [100, 100], GLEX: [99, 94], GL5T: [97, 94], CRJ2: [88, 70], CRJ7: [106, 76],
+  CRJ9: [119, 82], E170: [98, 85], E75L: [104, 94], E75S: [104, 94], E190: [119, 94], BCS1: [115, 115], BCS3: [127, 115], A319: [111, 112], A320: [123, 112], A20N: [123, 118],
+  A321: [146, 112], A21N: [146, 118], A306: [177, 147], A332: [193, 198], A333: [209, 198], A359: [219, 213], A388: [239, 262], B737: [110, 113], B738: [130, 113], B739: [138, 113],
+  B38M: [130, 118], B39M: [138, 118], B752: [155, 125], B763: [180, 156], B772: [209, 200], B77L: [209, 213], B77W: [242, 213], B788: [186, 197], B789: [206, 197], B744: [232, 211],
+  B748: [250, 225], MD11: [202, 170], C17: [174, 170], C130: [98, 133], C30J: [98, 133], K35R: [136, 131], DH8D: [108, 93], AT72: [89, 89], H60: [65, 54], EC35: [40, 33],
+  R44: [38, 33], AS50: [43, 35], B06: [39, 33], B407: [42, 35] };
+const WEIGHT_CLASS = { A1: 'Light (under 15,500 lb)', A2: 'Small (15,500 to 75,000 lb)', A3: 'Large (75,000 to 300,000 lb)', A4: 'High-vortex large (like a 757)', A5: 'Heavy (over 300,000 lb)', A6: 'High performance', A7: 'Helicopter' };
+function toExtras(a) {
+  let h = '';
+  // the route, with how far along it is
+  const e = routeEnds(a);
+  if (e.from?.pos && e.to?.pos) {
+    const done = distMi(e.from.pos, [a.lat, a.lon]), left = distMi([a.lat, a.lon], e.to.pos), pct = Math.max(2, Math.min(98, done / (done + left) * 100));
+    const code = s => (String(s || '').match(/\(([A-Z0-9]{3,4})\)\s*$/) || [, '?'])[1], town = s => String(s || '').replace(/\s*\([^)]*\)\s*$/, '');
+    h += `<div class="to-rt"><div class="ends"><span><b>${esc(code(e.from.label))}</b>${esc(town(e.from.label))}</span><span><b>${esc(code(e.to.label))}</b>${esc(town(e.to.label))}</span></div>
+      <div class="bar"><i style="width:${pct.toFixed(0)}%"></i><em style="left:${pct.toFixed(0)}%">✈</em></div>
+      <small>${distTxt(done, 0)} flown · ${distTxt(left, 0)} to go${e.guessed ? ' · estimated route' : ''}</small></div>`;
+  }
+  // more photos of this exact plane
+  const main = look(a.hex).photo?.src, pics = photosFor(a).filter(p => p.src !== main).slice(0, 3);
+  if (pics.length) h += `<h5 class="to-h">More photos of this plane</h5><div class="to-strip">${pics.map(p =>
+    `<a href="${esc(p.link)}" target="_blank" rel="noopener" title="Photo by ${esc(p.credit)} on Airport-Data.com"><img src="${esc(p.src)}" alt="" loading="lazy" onerror="this.parentNode.remove()"><span>© ${esc(p.credit)}</span></a>`).join('')}</div>`;
+  // about this aircraft
+  const row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : '', yr = +a.year || null, age = yr ? new Date().getFullYear() - yr : null;
+  const about = row('Built', yr ? `${yr} <small>(${age < 1 ? 'new this year' : age + (age === 1 ? ' year old' : ' years old')})</small>` : '')
+    + row('Weight class', WEIGHT_CLASS[a.category] || '')
+    + row('Seen here', a.visits ? (a.visits === 1 ? 'First visit in the last 30 days' : `${a.visits} visits in the last 30 days`) : '')
+    + row('Heard by', a.source ? ({ adsb_icao: 'ADS-B (its own GPS position)', mlat: 'MLAT (worked out from several receivers)', tisb_icao: 'TIS-B (radar, relayed)', adsr_icao: 'ADS-R (relayed)', mode_s: 'Mode S' }[a.source] || esc(a.source)) : '');
+  if (about) h += `<h5 class="to-h">About this aircraft</h5><table class="to-tbl">${about}</table>`;
+  // how big it is, beside a 45 ft school bus
+  const sz = PLANE_SIZE[a.type];
+  if (sz) {
+    const [len, span] = sz, BUS = 45, max = Math.max(len, span, BUS), bar = (label, ft, cls) => `<div class="sz"><span>${label}</span><i class="${cls}" style="width:${(ft / max * 100).toFixed(0)}%"></i><b>${ft} ft</b></div>`;
+    h += `<h5 class="to-h">How big is it?</h5><div class="to-size">${bar('Length', len, '')}${bar('Wingspan', span, '')}${bar('School bus', BUS, 'bus')}
+      <small>About ${(len / BUS).toFixed(len / BUS < 2 ? 1 : 0)} school bus${len / BUS < 1.05 && len / BUS > 0.95 ? '' : 'es'} long. Sizes are approximate.</small></div>`;
+  }
+  // the wind where it is (some planes report it), and the weather at the airport picked in Airport now
+  const w = aptNowInfo?.weather, wind = [];
+  if (typeof a.ws === 'number' && typeof a.wd === 'number') wind.push(row('At the plane', `${Math.round(a.ws)} kt from ${String(Math.round(a.wd)).padStart(3, '0')}° ${compass(a.wd)}${typeof a.oat === 'number' ? ` · ${Math.round(a.oat)}°C outside` : ''}`));
+  if (w && w.wspd != null) wind.push(row(`At ${esc(aptNowInfo.iata || aptNowInfo.ident)}`, `${w.wspd === 0 ? 'calm' : (typeof w.wdir === 'number' ? String(w.wdir).padStart(3, '0') + '°' : 'variable') + ' at ' + w.wspd + ' kt'}${w.cat ? ' · ' + esc(w.cat) : ''}${w.tempC != null ? ' · ' + Math.round(w.tempC * 9 / 5 + 32) + '°F' : ''}`));
+  if (wind.length) h += `<h5 class="to-h">Wind and weather</h5><table class="to-tbl">${wind.join('')}</table>`;
+  return h;
 }
 
 // ---------- flight instruments for the overhead close-up, drawn as SVG ----------
