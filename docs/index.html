@@ -168,7 +168,8 @@
         <div class="meta"><a href="https://github.com/krabbzdev/KrabbzDev-PorchRadar/wiki">📖 Read the Wiki: every feature explained</a><a href="https://github.com/krabbzdev/KrabbzDev-PorchRadar">Source code on GitHub</a></div>
       </div>
       <figure class="shot" style="margin:0">
-        <img src="dashboard.png" width="1600" height="1000" alt="The Porch Radar dashboard: a list of nearby aircraft with photos and routes on the left, a dark map of Tampa Bay with planes and airports in the middle, and today's log on the right.">
+        <img src="dashboard.png" width="1600" height="1000" alt="The Porch Radar dashboard: a dark map filling the screen with planes around home, a list of nearby aircraft with photos on the left and small panels on the right.">
+        <img loading="lazy" style="margin-top:14px" src="overhead.png" width="1600" height="1000" alt="The overhead close-up: the plane's path past home on a map, its photo, and cockpit-style dials for speed, heading and altitude.">
         <figcaption>Live around Tampa International: JetBlue in from New York, Southwest landing, a Gulfstream on the ramp.</figcaption>
       </figure>
     </div>
@@ -209,12 +210,14 @@
       <h2>What you get</h2>
       <p class="sub">Everything updates every few seconds from the public adsb.fi feed of aircraft transponder signals.</p>
       <div class="feat">
-        <div><h3><span>◎</span>Live map</h3><p>Every aircraft within your chosen radius (20 miles to start), colored by altitude, with airports, your home and an optional office pin.</p></div>
-        <div><h3><span>⚠</span>Overhead alert</h3><p>When a plane passes within a mile, a full-screen close-up shows its path, where it's from and going, and when it'll be closest. A chime and voice say "Overhead now!"</p></div>
+        <div><h3><span>◎</span>Live map</h3><p>The map fills the screen, with every aircraft within your chosen radius (up to 50 nm), colored by altitude, plus airports, FAA charts, TFRs, flight-history lines and a replay of the last 3 hours.</p></div>
+        <div><h3><span>⚠</span>Overhead alert</h3><p>When a plane passes overhead, a full-screen close-up shows its path, where it's from and going, and cockpit-style dials for its speed, heading and altitude. A chime and a natural voice announce it.</p></div>
+        <div><h3><span>👀</span>Watch list</h3><p>Type what you care about (military, 747, Coast Guard, a tail number) and get a pop-up and a spoken heads-up when one is in range.</p></div>
+        <div><h3><span>🛬</span>Airport now</h3><p>For any nearby airport: the runway in use, wind on each runway, density altitude, who is in the pattern, and the raw report and forecast.</p></div>
         <div><h3><span>▣</span>Photos and details</h3><p>A photo of the actual plane when one exists, plus maker and model, airline, owner, route, altitude, speed and how long it's been tracked.</p></div>
         <div><h3><span>N</span>Tail numbers</h3><p>Click any registration like <b>N367FX</b> for owner and registration details and a map of its flight path.</p></div>
         <div><h3><span>★</span>Military and emergencies</h3><p>Military and other interesting aircraft are highlighted, with a pop-up when one comes near. Emergency squawks get a red alert.</p></div>
-        <div><h3><span>▤</span>Today's log</h3><p>How many planes flew by today, the busiest hour, and leaderboards for closest, lowest, fastest, highest, airlines and aircraft types.</p></div>
+        <div><h3><span>▤</span>Today's log</h3><p>How many planes flew by today, the busiest hour, your all-time records, a shareable summary card, a spreadsheet download, and leaderboards for closest, lowest, fastest, highest, airlines and aircraft types.</p></div>
         <div><h3><span>⌖</span>ADS-B Exchange</h3><p>Open ADS-B Exchange's live view of any plane without leaving the dashboard.</p></div>
         <div><h3><span>⇄</span>Whole-house</h3><p>Leave it running on one PC and open it from any phone, tablet or TV browser at home: <code>http://&lt;PC name&gt;:8090</code>.</p></div>
         <div><h3><span>⌂</span>Feeder stats</h3><p>Already feed FlightAware with your own receiver? Add your username in Settings to see your rank and daily counts.</p></div>

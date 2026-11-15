@@ -314,6 +314,26 @@
   .to-grid div { background: var(--panel-2); border-radius: 10px; padding: 10px 12px; min-width: 0; }
   .to-grid .k { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
   .to-grid .v { font: 600 20px var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* the instrument panel on the close-up */
+  .to-inst { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 14px; padding: 12px 8px 10px; border-radius: 14px; background: linear-gradient(180deg, #10151f, #05080e); border: 1px solid #2a3350; box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+  .to-inst figure { margin: 0; text-align: center; min-width: 0; }
+  .to-inst svg { width: 100%; max-width: 132px; }
+  .to-inst .dial { fill: #070b13; stroke: #46526f; stroke-width: 2; }
+  .to-inst line { stroke: #dfe5f2; stroke-width: 1.2; }
+  .to-inst text { fill: #e8ecf6; font: 600 9px var(--mono); text-anchor: middle; }
+  .to-inst text.card { fill: #ffd27a; font-size: 10.5px; }
+  .to-inst text.unit { fill: #8793b0; font-size: 6.5px; letter-spacing: .5px; }
+  .to-inst text.big { font-size: 11.5px; }
+  .to-inst .needle { stroke: #ffb547; stroke-width: 2.6; stroke-linecap: round; }
+  .to-inst .hub { fill: #ffb547; stroke: #070b13; }
+  .to-inst .bug { fill: #4cc9f0; stroke: #070b13; }
+  .to-inst .lubber { fill: #ffb547; }
+  .to-inst .ownship { fill: #e8ecf6; }
+  .to-inst .box { fill: #000; stroke: #dfe5f2; }
+  .to-inst figcaption { margin-top: 2px; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: #8793b0; }
+  .to-inst figcaption b { display: block; font: 600 14px var(--mono); color: #e8ecf6; text-transform: none; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .to-inst .info-txt { color: #b9c2d8; font-size: 11px; text-align: left; }
+  .to-cs { letter-spacing: 1px; }
   .to-plane { position: relative; }
   .to-plane .halo { position: absolute; inset: -10px; border-radius: 50%; border: 3px solid var(--hot); animation: halo 1.4s ease-in-out infinite; }
   .to-plane svg { filter: drop-shadow(0 2px 6px rgba(0,0,0,.9)); }
@@ -664,13 +684,33 @@
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px 16px; }
     header, main { padding-left: 16px; padding-right: 16px; }
   }
+  /* ---- polish: themed scrollbars and map buttons, depth on the floating panels, calmer far-away planes ---- */
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 35%, var(--line)) transparent; }
+  .plane.out { opacity: .5; }
+  .plane.out svg { scale: .72; }
+  .leaflet-bar, .leaflet-touch .leaflet-bar { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+  .leaflet-bar a, .leaflet-bar a:hover, .leaflet-touch .leaflet-bar a { background: color-mix(in srgb, var(--panel) 90%, transparent); color: var(--text); border-bottom-color: var(--line); }
+  .leaflet-bar a:hover { background: var(--panel-2); color: var(--accent); }
+  .leaflet-bar a.leaflet-disabled { background: var(--panel); color: var(--muted); }
+  header { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--bg)), var(--bg)); }
+  header .brand svg { color: var(--accent); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
+  .stat { background: linear-gradient(180deg, var(--panel-2), var(--panel)); }
+  .stat .v { color: color-mix(in srgb, var(--accent) 55%, var(--text)); }
+  .st-h .chev { color: var(--accent); }
+  .leaflet-control.zoom-pct { background: color-mix(in srgb, var(--panel) 90%, transparent); color: var(--text); font-family: var(--mono); }
+  .tip-q { flex: none; width: 20px; height: 20px; padding: 0; margin-left: 6px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); color: var(--accent); font: 700 11px Inter, sans-serif; }
+  .layers-pop .chk.vol { justify-content: flex-start; }
+  .layers-pop .chk.vol input { flex: 1; }
   /* Full map (computers and tablets; phones keep the stacked layout above): the map fills everything under the top
      bar, the stats are one slim strip, and the plane list and the side panels float over the map as glass panels. */
   @media (min-width: 961px) {
     body { height: calc(100vh / var(--ui)); overflow: hidden; }
     header { padding: 8px 14px; gap: 12px; position: relative; z-index: 5; }
     .stats { display: flex; gap: 6px; padding: 6px 14px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); }
-    .stat { flex: 1 0 auto; display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 5px 12px; border-radius: 999px; }
+    .stat { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; justify-content: center; gap: 7px; padding: 5px 10px; border-radius: 999px; } /* pills shrink so all of them fit */
+    .stat .k { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 4 auto; min-width: 0; }
+    .stat .v { flex: none; overflow: visible; } /* numbers are never cut short; the labels and the two wordy pills give way first */
+    .stat .v.small { flex: 0 1 auto; min-width: 40px; overflow: hidden; text-overflow: ellipsis; }
     .stat:hover, .stat:focus-visible { transform: none; }
     .stat .k { font-size: 10px; }
     .stat .v, .stat .v.small { font-size: 15px; margin: 0; padding: 0; }
@@ -680,7 +720,7 @@
     .left-col, aside { position: absolute; top: 12px; width: 340px; z-index: 1001; }
     .left-col { left: 12px; bottom: 12px; }
     aside { right: 12px; max-height: calc(100% - 24px); overflow-y: auto; scrollbar-width: thin; }
-    #list, #stats, #today, #atc, #aptNow, #ships, #favs, #detail { background: color-mix(in srgb, var(--panel) 84%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    #list, #stats, #today, #atc, #aptNow, #ships, #favs, #detail { background: color-mix(in srgb, var(--panel) 84%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,.38); border-color: color-mix(in srgb, var(--accent) 18%, var(--line)); }
     /* a hidden column shrinks to its small show-again button */
     body.hide-left .left-col, body.hide-right aside { width: auto; bottom: auto; overflow: visible; }
     body.hide-left #leftToggle, body.hide-right #rightToggle { width: 32px; height: auto; min-height: 0; padding: 10px 0; background: color-mix(in srgb, var(--panel) 84%, transparent); }
@@ -700,7 +740,7 @@
 <body>
 <div id="emergencyBar" class="emerg-bar" role="alert" hidden></div>
 <header>
-  <div class="brand">
+  <div class="brand" title="May the Schwartz be with your radar">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
     KrabbzDev's Porch Radar
   </div>
@@ -735,9 +775,16 @@
         </select></label>
     </div>
   </details>
-  <label class="chk" title="Take over the screen with a close-up when a plane passes inside the overhead circle (size in Settings, Alerts)"><input type="checkbox" id="takeoverOn" data-pref="Overhead Plane Alert" data-pref-group="Alerts and sound" checked> Overhead Plane Alert</label>
-  <label class="chk" title="Chime and spoken announcement when a plane is overhead"><input type="checkbox" id="soundOn" data-pref="Sound" data-pref-group="Alerts and sound" checked> 🔔 Sound</label>
-  <label class="chk vol" title="Volume of the chime and the voice"><span aria-hidden="true">🔉</span><input type="range" id="volIn" data-pref="Volume" data-pref-group="Alerts and sound" data-pref-scale="100" data-pref-unit="%" min="0" max="1" step="0.05" aria-label="Volume"><b id="volVal"></b></label>
+  <details class="layers-menu" id="soundMenu">
+    <summary title="Alerts and sound: the full-screen close-up, the chime and voice, and the volume">🔔 Alerts <span class="lm-count" id="soundCount"></span></summary>
+    <div class="layers-pop">
+      <h5>When a plane is overhead</h5>
+      <label class="chk" title="Take over the screen with a close-up when a plane passes inside the overhead circle (size in Settings, Alerts)"><input type="checkbox" id="takeoverOn" data-pref="Overhead Plane Alert" data-pref-group="Alerts and sound" checked> Overhead Plane Alert</label>
+      <label class="chk" title="Chime and spoken announcement when a plane is overhead"><input type="checkbox" id="soundOn" data-pref="Sound" data-pref-group="Alerts and sound" checked> 🔔 Sound</label>
+      <h5>Volume</h5>
+      <label class="chk vol" title="Volume of the chime and the voice"><span aria-hidden="true">🔉</span><input type="range" id="volIn" data-pref="Volume" data-pref-group="Alerts and sound" data-pref-scale="100" data-pref-unit="%" min="0" max="1" step="0.05" aria-label="Volume"><b id="volVal"></b></label>
+    </div>
+  </details>
   <button id="homeBtn">⚙ Settings</button>
 </header>
 
@@ -773,7 +820,7 @@
       <summary class="st-h"><span class="chev">▸</span><span class="live" id="stLive"><i></i></span>FlightAware feeder stats<span class="st-sum" id="stSum"></span></summary>
       <div id="faSec"></div>
     </details>
-    <details id="today" open>
+    <details id="today">
       <summary class="st-h"><span class="chev">▸</span>📊 Today's log<span class="st-sum" id="tdSum"></span></summary>
       <svg id="tdHours" viewBox="0 0 240 50" preserveAspectRatio="none"></svg>
       <div class="td-axis"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>12a</span></div>
@@ -783,13 +830,13 @@
       <div id="tdList"></div>
       <div class="td-tools"><button type="button" id="tdCard" title="Save today as a picture you can share">📸 Summary card</button><a href="/api/log.csv" download title="Download today's log as a spreadsheet file">⬇ Spreadsheet (CSV)</a></div>
     </details>
-    <details id="atc" open>
+    <details id="atc">
       <summary class="st-h"><span class="chev">▸</span>🎧 Listen to ATC<span class="st-sum" id="atcSum"></span></summary>
       <div class="atc-row"><select id="atcSel" aria-label="Airport to listen to"></select><a id="atcGo" class="atc-btn" href="#" target="_blank" rel="noopener">🎧 Listen</a></div>
       <div class="atc-quick" id="atcQuick"></div>
       <div class="fa-note">Opens the airport's live tower, approach and ground feeds on LiveATC.net in a new tab.</div>
     </details>
-    <details id="aptNow" open>
+    <details id="aptNow">
       <summary class="st-h"><span class="chev">▸</span>🛬 Airport now<span class="st-sum" id="aptNowSum"></span></summary>
       <select id="aptNowSel" aria-label="Airport to show"></select>
       <div id="aptNowBody"></div>
@@ -1056,7 +1103,7 @@
 
 <div id="takeover" role="dialog" aria-label="Aircraft overhead">
   <div class="to-bar">
-    <span class="lbl"><i></i>Overhead now</span>
+    <span class="lbl"><i></i>Traffic overhead</span>
     <div class="to-bar-info" id="toBar"></div>
     <span class="hint">Closes automatically · Esc to close</span>
     <button id="toClose">✕ Close</button>
@@ -1188,7 +1235,7 @@ function distTxt(mi, dp = 1) { if (mi == null) return ''; return nautical ? `${+
 
 // ---------- pilots' numbers ----------
 const fpmTxt = vr => vr == null ? '' : vr === 0 ? 'Level' : `${vr > 0 ? '+' : '−'}${Math.abs(vr).toLocaleString()} ft/min ${vr > 0 ? 'climbing' : 'descending'}`;
-const SQUAWK_MEANS = { '7500': 'hijack', '7600': 'radio failure', '7700': 'emergency', '1200': 'VFR, not talking to ATC', '1202': 'glider', '7000': 'VFR (Europe)', '2000': 'not yet assigned' };
+const SQUAWK_MEANS = { '1234': 'the kind of combination someone has on their luggage', '7500': 'hijack', '7600': 'radio failure', '7700': 'emergency', '1200': 'VFR, not talking to ATC', '1202': 'glider', '7000': 'VFR (Europe)', '2000': 'not yet assigned' };
 const squawkTxt = sq => sq ? sq + (SQUAWK_MEANS[sq] ? ` (${SQUAWK_MEANS[sq]})` : '') : '';
 const gpsAltTxt = a => typeof a.altGps === 'number' && a.alt !== 'ground' ? a.altGps.toLocaleString() + ' ft' : '';
 
@@ -1294,8 +1341,10 @@ function setChart(name) {
   save('skyChart', name); $('chartSel').value = name;
   if (chartLayer) { map.removeLayer(chartLayer); chartLayer = null; }
   if (name) {
-    const [svc, minNativeZoom, maxNativeZoom] = CHARTS[name];
-    chartLayer = L.tileLayer(FAA_CHARTS + svc + '/MapServer/tile/{z}/{y}/{x}', { pane: 'charts', opacity: 1, minNativeZoom, maxNativeZoom, maxZoom: 16, // full strength: the dark map showing through muddied its colours
+    const [svc, minZ, maxZ] = CHARTS[name];
+    // sharper: each tile comes from one zoom level deeper and is drawn at half size (four tiles where one was), so the
+    // chart's small print is crisp instead of stretched
+    chartLayer = L.tileLayer(FAA_CHARTS + svc + '/MapServer/tile/{z}/{y}/{x}', { pane: 'charts', opacity: 1, tileSize: 128, zoomOffset: 1, minNativeZoom: minZ - 1, maxNativeZoom: maxZ - 1, maxZoom: 16, // full strength: the dark map showing through muddied its colours
       attribution: 'Charts: FAA Aeronautical Information Services (not for navigation)' }).addTo(map);
     if (placeNames) map.removeLayer(placeNames);
   } else if (placeNames) placeNames.addTo(map);
@@ -1309,8 +1358,13 @@ setChart(load('skyChart', ''));
 function countLayers() { $('layersCount').textContent = `· ${$('layersMenu').querySelectorAll('input[type=checkbox]:checked').length} on`; }
 $('layersMenu').addEventListener('change', countLayers);
 setTimeout(countLayers, 0); // once every option has been set from what was saved
-document.addEventListener('click', e => { if ($('layersMenu').open && !$('layersMenu').contains(e.target)) $('layersMenu').open = false; });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') $('layersMenu').open = false; });
+for (const id of ['layersMenu', 'soundMenu']) { // both top-bar menus close when you click elsewhere or press Esc
+  document.addEventListener('click', e => { if ($(id).open && !$(id).contains(e.target)) $(id).open = false; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') $(id).open = false; });
+}
+const showSoundCount = () => { $('soundCount').textContent = $('soundOn').checked ? '· sound on' : '· muted'; };
+$('soundMenu').addEventListener('change', () => setTimeout(showSoundCount));
+setTimeout(showSoundCount);
 // Weather overlay: NWS NEXRAD rain radar (US only) via Iowa Environmental Mesonet, refreshed every 5 minutes.
 // Sits under the place names (shadowPane) so streets and towns stay readable.
 map.createPane('weather').style.zIndex = 350;
@@ -1742,7 +1796,7 @@ function aptPanel(a) {
 
 // ---------- Listen to ATC: opens LiveATC's page for the airport (their streams can't be embedded) ----------
 // Picker panel: nearby airports (closest first) plus quick buttons for the closest major ones.
-$('atc').open = load('skyAtcOpen', true);
+$('atc').open = load('skyAtcOpen', false);
 $('atc').addEventListener('toggle', () => save('skyAtcOpen', $('atc').open));
 function renderAtcPicker() {
   if (!home || !airportList.length) return;
@@ -1778,11 +1832,19 @@ $('showApts').addEventListener('change', e => { showApts = e.target.checked; sav
 
 const radiusBounds = () => L.latLng(home).toBounds(radius * MI * 2.2);
 const DEFAULT_ZOOM_STEPS = 0; // start at 100%: the view that fits the whole Tracker Radius
+// On a computer the side panels float over the map: the circle is fitted and centered in the space between them.
+function sidePads() {
+  if (!matchMedia('(min-width: 961px)').matches) return [0, 0];
+  const w = id => document.getElementById(id).getBoundingClientRect().width + 24;
+  return [w('leftCol'), w('rightCol')];
+}
+function baseZoom() { const [l, r] = sidePads(); return map.getBoundsZoom(radiusBounds(), false, L.point(l + r, 0)); }
 function fitRadius() {
   if (!home) return;
   // the map has no size yet (page loading in a hidden window): zooming now would pick the whole-world view
   if (!map.getSize().x) { map.invalidateSize(); return setTimeout(fitRadius, 500); }
-  map.setView(home, map.getBoundsZoom(radiusBounds()) + DEFAULT_ZOOM_STEPS, { animate: true });
+  const [l, r] = sidePads(), z = baseZoom() + DEFAULT_ZOOM_STEPS;
+  map.setView(map.unproject(map.project(home, z).add([(r - l) / 2, 0]), z), z, { animate: true });
 }
 
 // Zoom level as a percentage beside +/-: 100% shows the whole Tracker Radius, each zoom step doubles or halves it.
@@ -1799,11 +1861,11 @@ zoomPct.addTo(map);
 function showZoomPct() {
   const el = zoomPct.getContainer();
   if (!home) { el.textContent = Math.round(2 ** (map.getZoom() - 11) * 100) + '%'; return; }
-  el.textContent = Math.round(2 ** (map.getZoom() - map.getBoundsZoom(radiusBounds())) * 100) + '%';
+  el.textContent = Math.round(2 ** (map.getZoom() - baseZoom()) * 100) + '%';
   // past the FAA chart's sharpest zoom it's stretched (and blurry): say so
-  const chartMax = chartLayer?.options.maxNativeZoom, over = chartMax != null && map.getZoom() > chartMax;
+  const chartMax = chartLayer ? chartLayer.options.maxNativeZoom + 1 : null, over = chartMax != null && map.getZoom() > chartMax;
   el.classList.toggle('chart-over', over);
-  el.title = over ? `The chart is sharpest at ${Math.round(2 ** (chartMax - map.getBoundsZoom(radiusBounds())) * 100)}% or less: zoom out for a clearer chart (click to go back to 100%)` : 'Zoom level (100% shows your whole Tracker Radius). Click to go back to the default, 100%.';
+  el.title = over ? `The chart is sharpest at ${Math.round(2 ** (chartMax - baseZoom()) * 100)}% or less: zoom out for a clearer chart (click to go back to 100%)` : 'Zoom level (100% shows your whole Tracker Radius). Click to go back to the default, 100%.';
 }
 map.on('zoomend', showZoomPct);
 showZoomPct();
@@ -1854,7 +1916,7 @@ function planeIcon(a, inside) {
   const label = show && name ? `<span class="tag">${sp ? `<em style="color:${SPECIAL[sp].color}">${SPECIAL[sp].tag}</em> ` : ''}${name}</span>` : '';
   const halo = sp ? `<span class="halo" style="--hc:${SPECIAL[sp].color}"></span>` : '';
   const logo = show && logoUrl(a) ? `<img class="logo" src="${logoUrl(a)}" alt="" onerror="this.remove()">` : '';
-  return L.divIcon({ className: 'plane', html: halo + logo + aircraftSvg(a, color, a.track || 0) + label, iconSize: [26, 26], iconAnchor: [13, 13] });
+  return L.divIcon({ className: show ? 'plane' : 'plane out', html: halo + logo + aircraftSvg(a, color, a.track || 0) + label, iconSize: [26, 26], iconAnchor: [13, 13] });
 }
 
 // Airline logo from the callsign's 3-letter ICAO airline code (AAL1373 -> AAL), from the public
@@ -2658,16 +2720,56 @@ function drawTakeover(a) {
       <div class="to-route ${routeOf(a) ? '' : 'none'}">${routeOf(a) || 'Route not published'}</div>
       ${cpaHtml}
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">${adsbxBtn(a.hex, a.flight || reg, '🌐 View on ADS-B Exchange', 'big')}${shareBtn(a.hex, 'big')}</div>
+      ${toInstruments(a)}
       <div class="to-grid">
-        <div><div class="k">Altitude${infoBtn('Altitude')}</div><div class="v" style="color:${color}">${fmtAlt(a.alt)}${a.vr > 300 ? ' ↑' : a.vr < -300 ? ' ↓' : ''}</div>${infoText('Altitude')}</div>
-        <div><div class="k">Speed${infoBtn('Speed')}</div><div class="v">${speedTxt(a.gs) || '—'}</div>${infoText('Speed')}</div>
-        <div><div class="k">Distance${infoBtn('Distance')}</div><div class="v">${distTxt(a.dist, 2)} ${compass(a.brg)}</div>${infoText('Distance')}</div>
-        <div><div class="k">Heading${infoBtn('Heading')}</div><div class="v">${a.track != null ? Math.round(a.track) + '° ' + compass(a.track) : '—'}</div>${infoText('Heading')}</div>
-        <div><div class="k">Vertical speed${infoBtn('Vertical speed')}</div><div class="v">${fpmTxt(a.vr) || '—'}</div>${infoText('Vertical speed')}</div>
+        <div><div class="k">From home${infoBtn('Distance')}</div><div class="v">${distTxt(a.dist, 2)} ${compass(a.brg)}</div>${infoText('Distance')}</div>
         <div><div class="k">Squawk${infoBtn('Squawk')}</div><div class="v">${squawkTxt(a.squawk) || '—'}</div>${infoText('Squawk')}</div>
         <div><div class="k">Tracked${infoBtn('Tracked')}</div><div class="v">${trackedFor(a) || '—'}</div>${infoText('Tracked')}</div>
       </div>
     </div>`;
+}
+
+// ---------- flight instruments for the overhead close-up, drawn as SVG ----------
+// Left to right, like a cockpit panel: airspeed dial (knots x100), heading rose (the card turns so the plane's
+// heading is at the top; the blue marker points to home), and the altitude in a box inside a vertical-speed dial.
+function toInstruments(a) {
+  const pol = (r, deg) => { const t = (deg - 90) * Math.PI / 180; return [(60 + r * Math.cos(t)).toFixed(1), (60 + r * Math.sin(t)).toFixed(1)]; };
+  const tick = (deg, r1, r2) => { const [x1, y1] = pol(r1, deg), [x2, y2] = pol(r2, deg); return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; };
+  const label = (deg, r, s, cls = '') => { const [x, y] = pol(r, deg); return `<text x="${x}" y="${(+y + 3).toFixed(1)}" class="${cls}">${s}</text>`; };
+  const needle = (deg, r) => { const [x, y] = pol(r, deg); return `<line class="needle" x1="60" y1="60" x2="${x}" y2="${y}"/><circle class="hub" cx="60" cy="60" r="3.5"/>`; };
+  const dial = '<circle class="dial" cx="60" cy="60" r="56"/>';
+
+  // airspeed: 0 to 600 knots over 300 degrees
+  const kt = typeof a.gs === 'number' ? a.gs : null, asiDeg = v => -150 + Math.min(600, Math.max(0, v)) / 2;
+  let asi = dial;
+  for (let v = 0; v <= 600; v += 25) asi += tick(asiDeg(v), v % 100 ? 49 : 45, 54);
+  for (let v = 0; v <= 600; v += 100) asi += label(asiDeg(v), 37, v / 100);
+  asi += `<text x="60" y="84" class="unit">KT x100</text>` + (kt == null ? '' : needle(asiDeg(kt), 44));
+
+  // heading: the compass card turns under a fixed plane
+  const trk = a.track ?? null, homeBrg = a.brg != null ? (a.brg + 180) % 360 : null; // a.brg is home -> plane
+  let card = '';
+  for (let d = 0; d < 360; d += 10) card += tick(d, d % 30 ? 50 : 46, 54);
+  ['N', '3', '6', 'E', '12', '15', 'S', '21', '24', 'W', '30', '33'].forEach((s, i) => { card += label(i * 30, 38, s, i % 3 ? '' : 'card'); });
+  if (homeBrg != null) { const [x, y] = pol(51, homeBrg); card += `<circle class="bug" cx="${x}" cy="${y}" r="4"><title>Home is this way</title></circle>`; }
+  const hsi = dial + `<g transform="rotate(${-(trk || 0)} 60 60)">${card}</g>`
+    + '<path class="lubber" d="M60 3 l5 9 h-10z"/><path class="ownship" d="M60 46 l3 10 11 6 v3 l-11 -3 v7 l4 3 v2 l-7 -2 -7 2 v-2 l4 -3 v-7 l-11 3 v-3 l11 -6z"/>';
+
+  // vertical speed (zero at 9 o'clock, up is climbing, 4,000 ft/min at each end) around the altitude box
+  const vr = typeof a.vr === 'number' ? Math.max(-4000, Math.min(4000, a.vr)) : 0, vsiDeg = v => -90 + v / 4000 * 120;
+  let vsi = dial;
+  for (let v = -4000; v <= 4000; v += 500) vsi += tick(vsiDeg(v), v % 1000 ? 49 : 45, 54);
+  for (const v of [-4000, -2000, 0, 2000, 4000]) vsi += label(vsiDeg(v), 37, Math.abs(v / 1000));
+  vsi += needle(vsiDeg(vr), 44)
+    + `<rect class="box" x="58" y="50" width="52" height="20" rx="3"/><text x="84" y="64" class="big">${a.alt === 'ground' ? 'GND' : typeof a.alt === 'number' ? a.alt.toLocaleString() : '----'}</text>`
+    + '<text x="84" y="80" class="unit">FT</text><text x="30" y="38" class="unit">UP</text><text x="30" y="88" class="unit">DN</text>';
+
+  const fig = (svg, value, name, info) => `<figure><svg viewBox="0 0 120 120" role="img" aria-label="${name}: ${value}">${svg}</svg><figcaption><b>${value}</b>${name}${infoBtn(info)}</figcaption>${infoText(info)}</figure>`;
+  return `<div class="to-inst">`
+    + fig(asi, speedTxt(a.gs) || '—', 'Speed', 'Speed')
+    + fig(hsi, trk != null ? String(Math.round(trk)).padStart(3, '0') + '° ' + compass(trk) : '—', 'Heading', 'Heading')
+    + fig(vsi, fmtAlt(a.alt), fpmTxt(a.vr) || 'Level', 'Vertical speed')
+    + `</div>`;
 }
 
 // ---------- ADS-B Exchange viewer: their live globe for one aircraft, shown inside the dashboard ----------
@@ -3060,7 +3162,7 @@ async function poll() {
     $('live').className = 'live off';
     $('liveTxt').textContent = 'Data offline';
     $('banner').className = 'banner show';
-    $('banner').textContent = `Can't get aircraft data (${e.message}). Retrying every few seconds. It will keep retrying.`;
+    $('banner').textContent = `Radar jammed! Can't get aircraft data (${e.message}). Retrying every few seconds. It will keep retrying.`;
   }
 }
 
@@ -3151,7 +3253,7 @@ const AIRLINES = {
   AWI: 'Air Wisconsin', GJS: 'GoJet', QXE: 'Horizon', CPZ: 'Compass', BPX: 'Pilot training', KAP: 'Cape Air', SIL: 'Silver Airways',
 };
 let logData = null, logTab = load('skyLogTab', 'closest');
-$('today').open = load('skyTodayOpen', true);
+$('today').open = load('skyTodayOpen', false);
 $('today').addEventListener('toggle', () => save('skyTodayOpen', $('today').open));
 const hourName = h => (h % 12 || 12) + (h < 12 ? ' AM' : ' PM');
 const timeOf = t => t ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
@@ -3181,6 +3283,7 @@ function renderLog() {
   $('tdTopTypeSub').textContent = top ? `${top.count} seen${L.types[1] ? ' · next: ' + nice(L.types[1].key) : ''}` : ' ';
   $('tdFastest').textContent = fast ? speedTxt(fast.value) : '–';
   $('tdFastestSub').textContent = fast ? `${fast.flight || fast.reg || fast.hex.toUpperCase()}${fast.desc ? ' · ' + nice(fast.desc) : fast.type ? ' · ' + fast.type : ''}` : ' ';
+  $('tdFastest').title = fast && fast.value >= 600 ? 'Ludicrous speed!' : '';
   $('tdBusySub').textContent = L.hourly[peak] ? `${L.hourly[peak]} aircraft` : ' ';
   $('tdSum').textContent = `· ${L.unique.toLocaleString()} aircraft · ${L.military} military`;
 
@@ -4369,6 +4472,8 @@ function renderAptNow() {
   $('aptNowSum').textContent = '· ' + sum;
 }
 $('aptNowSel').onchange = loadAptNow;
+$('aptNow').open = load('skyAptNowOpen', false);
+$('aptNow').addEventListener('toggle', () => save('skyAptNowOpen', $('aptNow').open));
 $('aptNowBody').addEventListener('click', e => { const c = e.target.closest('.an-chip'); if (c) { e.preventDefault(); select(c.dataset.hex, true); } });
 setInterval(renderAptNow, 10000);
 setInterval(loadAptNow, 5 * 60000);
@@ -4427,7 +4532,7 @@ const replayCtl = L.control({ position: 'bottomright' });
 replayCtl.onAdd = () => {
   const el = L.DomUtil.create('div', 'replay-ctl');
   el.innerHTML = '<button type="button" id="rpBtn" title="Scrub back through the last 3 hours of traffic">⏪ Replay</button>'
-    + '<span id="rpBar" hidden><input type="range" id="rpIn" min="-180" max="0" step="1" value="-10" aria-label="Minutes ago" title="Drag to move back in time, up to 3 hours. The dots are where each plane was then."><b id="rpTime"></b><button type="button" id="rpClose" title="Leave replay and go back to the live map">✕ Live</button></span>';
+    + '<span id="rpBar" hidden><input type="range" id="rpIn" min="-180" max="0" step="1" value="-10" aria-label="Minutes ago" title="Drag to move back in time, up to 3 hours. The dots are where each plane was then."><b id="rpTime"></b><button type="button" id="rpClose" title="Leave replay and go back to now. Everything you see then is happening now.">✕ Live</button></span>';
   L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el);
   return el;
 };
@@ -4469,7 +4574,7 @@ $('rpClose').onclick = () => {
 function recordsHtml(R) {
   if (!R) return '';
   const B = R.best, row = (k, label, val) => B[k] ? `<div class="lb"><span class="rk">★</span><div class="nm"><b>${label}</b> <small>${esc(B[k].label)}${B[k].desc ? ' · ' + esc(nice(B[k].desc)) : ''}</small></div><div class="val">${val(B[k].v)}<small>${esc(B[k].day)}</small></div></div>` : '';
-  return row('fastest', 'Fastest ever', v => speedTxt(v)) + row('highest', 'Highest ever', v => v.toLocaleString() + ' ft')
+  return row('fastest', B.fastest && B.fastest.v >= 600 ? 'Fastest ever (ludicrous speed)' : 'Fastest ever', v => speedTxt(v)) + row('highest', 'Highest ever', v => v.toLocaleString() + ' ft')
     + row('closest', 'Closest ever', v => distTxt(v, 2)) + row('lowest', 'Lowest pass ever', v => v.toLocaleString() + ' ft')
     + R.newTypes.map(p => `<div class="lb ${tracks.has(p.hex) ? 'live' : ''}" data-hex="${p.hex}"><span class="rk">🆕</span><div class="nm"><b>${esc(p.desc ? nice(p.desc) : p.type)}</b> <small>first time here · ${esc(p.flight || p.reg || p.hex.toUpperCase())}</small></div><div class="val">${timeOf(p.first)}</div></div>`).join('')
     + `<div class="lb-empty">${R.typesEver.toLocaleString()} different aircraft types seen since ${esc(R.since)}.</div>`;
@@ -4617,6 +4722,21 @@ function applyTips() {
   }
 }
 applyTips();
+if (matchMedia('(hover: none)').matches) {
+  for (const l of document.querySelectorAll('label.chk[title], header .ctl')) {
+    const tip = l.title || l.querySelector('[title]')?.title;
+    if (!tip) continue;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tip-q'; b.textContent = '?'; b.dataset.tip = tip; b.setAttribute('aria-label', 'What is this?');
+    l.appendChild(b);
+  }
+  document.addEventListener('click', e => {
+    const q = e.target.closest('.tip-q');
+    if (!q) return;
+    e.preventDefault(); e.stopPropagation(); // don't flip the switch it sits in
+    toast(esc(q.dataset.tip), '#4cc9f0');
+  }, true);
+}
 
 init();
 </script>
