@@ -707,7 +707,7 @@
   <span class="live" id="live"><i></i><span id="liveTxt">Connecting…</span></span>
   <span class="lan-addr" id="lanAddr" hidden title="Network access is on (Settings → Network): other devices on your network can open the dashboard at these addresses"></span>
   <div class="spacer"></div>
-  <div class="ctl">Tracker Radius <input type="range" id="radius" data-pref="Tracker radius" data-pref-group="Map" data-pref-unit=" mi" min="1" max="25" step="1" value="21"><b id="radiusVal">18 nm</b></div>
+  <div class="ctl">Tracker Radius <input type="range" id="radius" data-pref="Tracker radius" data-pref-group="Map" data-pref-unit=" mi" min="1" max="57" step="1" value="21"><b id="radiusVal">18 nm</b></div>
   <details class="layers-menu" id="layersMenu">
     <summary title="Choose what the map shows">🗺 Map Options <span class="lm-count" id="layersCount"></span></summary>
     <div class="layers-pop">
@@ -793,7 +793,7 @@
       <select id="aptNowSel" aria-label="Airport to show"></select>
       <div id="aptNowBody"></div>
     </details>
-    <details id="ships" open>
+    <details id="ships">
       <summary class="st-h"><span class="chev">▸</span>🚢 Cruise ships<span class="st-sum" id="shipsSum"></span></summary>
       <div id="shipsBody"></div>
     </details>
@@ -856,7 +856,7 @@
       <div class="place">
         <h4>⭕ Overhead distance</h4>
         <p class="hint">How close a plane has to pass to set off the overhead alerts: the full-screen close-up and the voice. It's the red dashed circle around home on the map, and changes as you drag.</p>
-        <div class="row" style="align-items:center"><input type="range" id="alertMiIn" data-pref="Overhead distance" data-pref-group="Alerts and sound" data-pref-unit=" mi" min="0.25" max="5" step="0.25" aria-label="Overhead distance in miles"><b id="alertMiVal" style="min-width:64px;text-align:right;font-family:var(--mono)"></b></div>
+        <div class="row" style="align-items:center"><input type="range" id="alertMiIn" data-pref="Overhead distance" data-pref-group="Alerts and sound" data-pref-unit=" mi" min="0.2" max="5" step="0.1" aria-label="Overhead distance in miles"><b id="alertMiVal" style="min-width:64px;text-align:right;font-family:var(--mono)"></b></div>
       </div>
       <div class="place">
         <h4>👀 Watch list</h4>
@@ -899,7 +899,7 @@
         <h4>🎨 Theme</h4>
         <p class="hint">The colours of the dashboard. Changes right away. Daylight also switches the map to the Light style (and the others back to Dark) when the map is on one of those two; other map styles stay as you set them.</p>
         <select id="themeSel" data-pref="Theme" data-pref-group="Display">
-          <option value="midnight">Midnight (default)</option><option value="daylight">Daylight</option><option value="radar">Radar</option><option value="dusk">Dusk</option>
+          <option value="midnight">Midnight</option><option value="daylight">Daylight</option><option value="radar">Radar (default)</option><option value="dusk">Dusk</option>
         </select>
       </div>
       <div class="place">
@@ -1091,24 +1091,20 @@ function save(k, v) {
   try { localStorage.setItem(k, s); } catch (e) {}
   if (mirrorOn) { mirrorQueue[k] = s; clearTimeout(mirrorTimer); mirrorTimer = setTimeout(mirrorFlush, 600); }
 }
-// These map layers start off now. Browsers that had them on get them switched off once; after that, whatever
-// you pick in 🗺 Map Options sticks.
-if (!load('skyLayersOff1', false)) {
-  for (const k of ['skyMetars', 'skyTfrs', 'skyNight', 'skyWeather']) save(k, false);
-  save('skyLayersOff1', true);
-}
+// Map layers: whatever you pick in 🗺 Map Options sticks. (They used to be switched off once here; that reset is gone so the starting choices below apply.)
+save('skyLayersOff1', true);
 // Ships are on by default now: switch them on once in browsers that had them off, then your choice sticks.
 if (!load('skyShipsOn1', false)) { save('skyShips', true); save('skyShipsOn1', true); }
 if (!load('skyShowAllOn1', false)) { save('skyShowAll', true); save('skyShowAllOn1', true); } // same for "Show outside radius"
 // theme: set before the page paints; the map follows only when it is on the plain Dark/Light styles
 const THEMES = ['midnight', 'daylight', 'radar', 'dusk'];
 function setTheme(name, fromUser) {
-  if (!THEMES.includes(name)) name = 'midnight';
+  if (!THEMES.includes(name)) name = 'radar';
   document.documentElement.dataset.theme = name; save('skyTheme', name); $('themeSel').value = name;
   const st = load('skyMapStyle', 'dark');
   if (fromUser && (st === 'dark' || st === 'light') && typeof setMapStyle === 'function') setMapStyle(name === 'daylight' ? 'light' : 'dark');
 }
-document.documentElement.dataset.theme = THEMES.includes(load('skyTheme', 'midnight')) ? load('skyTheme', 'midnight') : 'midnight';
+document.documentElement.dataset.theme = THEMES.includes(load('skyTheme', 'radar')) ? load('skyTheme', 'radar') : 'radar';
 $('themeSel').value = document.documentElement.dataset.theme;
 $('themeSel').addEventListener('change', e => setTheme(e.target.value, true));
 let home = null; // comes from the app's settings (see init)
@@ -1353,7 +1349,7 @@ function drawHome() {
 const sweepCv = document.createElement('canvas');
 sweepCv.className = 'sweep-cv';
 map.getContainer().appendChild(sweepCv);
-let sweepOn = load('skySweep', false), sweepRaf = 0, sweepRgb = '76,201,240', sweepColorAt = 0;
+let sweepOn = load('skySweep', true), sweepRaf = 0, sweepRgb = '76,201,240', sweepColorAt = 0;
 $('sweepOn').checked = sweepOn;
 let sweepStr = load('skySweepStr', 1); // 0.1 to 1: how strong the beam looks
 const showSweepStr = () => { $('sweepStrIn').value = sweepStr; $('sweepStrVal').textContent = Math.round(sweepStr * 100) + '%'; };
@@ -1491,7 +1487,7 @@ $('metarOn').addEventListener('change', e => { metarOn = e.target.checked; save(
 // ---------- TFRs: the FAA's temporary flight restrictions as red areas (⛔ TFRs in the top bar) ----------
 map.createPane('tfrs').style.zIndex = 380; // over charts and radar, under airports and planes
 const tfrLayer = L.layerGroup().addTo(map);
-let tfrOn = load('skyTfrs', false);
+let tfrOn = load('skyTfrs', true);
 $('tfrOn').checked = tfrOn;
 const TFR_TYPE = { SECURITY: 'Security (VIP visit, stadium, military)', HAZARDS: 'Hazard (fire, disaster, rescue)', SPACE: 'Space launch or recovery',
   'SPACE OPERATIONS': 'Space launch or recovery', 'SPECIAL': 'Special event', 'AIR SHOWS/SPORTS': 'Air show or sporting event', 'VIP': 'VIP movement', '91.141': 'VIP movement (President)', '99.7': 'Special security instructions' };
@@ -1559,7 +1555,7 @@ const clockTxt = d => d ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2
 
 // Day/night line: the night side of the earth shaded, redrawn every 5 minutes (🌙 Day/Night in the top bar)
 map.createPane('night').style.zIndex = 340; // under the weather radar and everything else
-let nightOn = load('skyNight', false), nightShape = null;
+let nightOn = load('skyNight', true), nightShape = null;
 $('nightOn').checked = nightOn;
 function drawNight() {
   if (nightShape) { map.removeLayer(nightShape); nightShape = null; }
@@ -2888,7 +2884,7 @@ async function drawRegTrack(hex, fit) {
 
 // ---------- nearby scrolling alert ----------
 // overhead distance: planes inside this circle set off the alerts (Settings > Alerts; each browser keeps its own)
-let ALERT_MI = load('skyAlertMi', 1);
+let ALERT_MI = load('skyAlertMi', 2.3); // 2.3 miles = 2.0 nautical miles
 const miText = v => distTxt(v, 2);
 $('alertMiIn').value = ALERT_MI;
 $('alertMiVal').textContent = miText(ALERT_MI);
@@ -4356,7 +4352,7 @@ setInterval(loadAptNow, 5 * 60000);
 
 // ---------- trails: where every plane flew in the last hour, as faint lines (〰 Trails in Map Options) ----------
 map.createPane('trails').style.zIndex = 390; // under the airports and planes
-var trailsOn = load('skyTrails', false);
+var trailsOn = load('skyTrails', true);
 // 0.05 to 1 (default 0.25): how strong trails look. The last-hour lines use 90% of it, the live line behind each plane 110%.
 var trailStr = load('skyTrailStr', 0.25);
 const showTrailStr = () => { $('trailStrIn').value = trailStr; $('trailStrVal').textContent = Math.round(trailStr * 100) + '%'; };

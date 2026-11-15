@@ -460,7 +460,7 @@ async function airportInfo(ident) {
 // ---------- aircraft data: adsb.fi public feed ----------
 // adsb.fi open data: free for personal, non-commercial use, 1 request/sec max, attribution required.
 const PUBLIC_NAME = 'adsb.fi', PUBLIC_LINK = 'https://adsb.fi';
-const PUBLIC_RADIUS_NM = 40;
+const PUBLIC_RADIUS_NM = 55; // a bit more than the biggest Tracker Radius (50 nm), so the whole circle is filled
 let lastPublic = null;
 // adsb.fi allows one request a second. Everything that asks it (home feed, exploring, favourites, the plane
 // finder) queues here, so requests are always at least 1.1 s apart.
