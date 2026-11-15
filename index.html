@@ -226,6 +226,16 @@
   .route { font-size: 12px; color: var(--accent); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .route.none { color: var(--muted); font-style: italic; }
   .card .model { margin: 2px 0 6px; }
+  /* the flight strip on list cards and the hover card */
+  .fstrip { display: grid; grid-template-columns: 1.25fr 1fr 1fr 1.15fr; gap: 1px; margin: 6px 0 5px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--line); font-family: var(--mono); }
+  .fstrip span { display: block; min-width: 0; padding: 3px 7px 4px; background: color-mix(in srgb, var(--bg) 70%, var(--panel)); }
+  .fstrip i { display: block; font: 600 8.5px Inter, sans-serif; letter-spacing: .9px; color: var(--muted); font-style: normal; }
+  .fstrip b { display: block; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fstrip svg { width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; color: var(--accent); }
+  .plane-tip .fstrip { margin: 8px 0 2px; }
+  .card { border-left: 3px solid var(--alt, transparent); }
+  .card > .fstrip { grid-column: 1 / -1; margin: -4px 0 0; }
+  #mtabs { display: none; }
   .metrics { display: flex; gap: 12px; font-family: var(--mono); font-size: 12px; flex-wrap: wrap; row-gap: 2px; }
   .metrics span { white-space: nowrap; }
   .metrics em { font-style: normal; color: var(--muted); }
@@ -678,6 +688,21 @@
   .poi span { font: 700 11px Inter, sans-serif; color: #fff; background: rgba(11,16,32,.85); border: 1px solid var(--c); padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
 
   @media (max-width: 960px) {
+    /* one section at a time, picked with the bar at the bottom */
+    body { padding-bottom: 60px; }
+    #mtabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2400; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+    #mtabs button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 0 6px; border: 0; border-radius: 0; background: none; color: var(--muted); font-size: 18px; }
+    #mtabs button span { font-size: 11px; }
+    #mtabs button.on { color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
+    .col-toggle { display: none; }
+    body[data-view="map"] .left-col, body[data-view="map"] aside, body[data-view="map"] .stats,
+    body[data-view="planes"] #map, body[data-view="planes"] aside, body[data-view="planes"] .stats,
+    body[data-view="log"] #map, body[data-view="log"] .left-col, body[data-view="log"] aside > :not(#today),
+    body[data-view="more"] #map, body[data-view="more"] .left-col, body[data-view="more"] .stats, body[data-view="more"] #today { display: none; }
+    body[data-view] main { display: block; }
+    body[data-view="map"] #map { height: calc(100vh / var(--ui) - 190px); min-height: 320px; }
+    body[data-view="planes"] .left-col { display: flex; }
+    body[data-view="planes"] #list { max-height: none; overflow: visible; }
     main { grid-template-columns: minmax(0, 1fr); grid-template-rows: calc(55vh / var(--ui)) calc(60vh / var(--ui)) auto; grid-template-areas: "map" "list" "aside"; }
     aside { grid-template-columns: minmax(0, 1fr); }
     #map { height: calc(55vh / var(--ui)); }
@@ -716,7 +741,7 @@
     .stat .v, .stat .v.small { font-size: 15px; margin: 0; padding: 0; }
     .stat .s { display: none; }
     main, body.hide-left main, body.hide-right main, body.hide-left.hide-right main { display: block; position: relative; z-index: 0; padding: 0; min-height: 0; }
-    #map { position: absolute; inset: 0; border: 0; border-radius: 0; min-height: 0; }
+    #map { position: absolute !important; inset: 0; border: 0; border-radius: 0; min-height: 0; } /* !important: beats the inline position the map library sets when the page starts narrow */
     .left-col, aside { position: absolute; top: 12px; width: 340px; z-index: 1001; }
     .left-col { left: 12px; bottom: 12px; }
     aside { right: 12px; max-height: calc(100% - 24px); overflow-y: auto; scrollbar-width: thin; }
@@ -854,7 +879,12 @@
     <h3 id="setTitle">Settings</h3>
     <button class="set-x" id="setX" aria-label="Close">✕</button>
   </div>
-  <p id="welcome" class="welcome" hidden>Type your <b>ZIP code</b> or <b>address</b> below and pick your home from the list. That's where we'll watch the sky for planes overhead. You only need to do this once.</p>
+  <div id="welcome" class="welcome" hidden><b>Three steps and you're watching the sky:</b>
+    <ol style="margin:6px 0 0;padding-left:20px;line-height:1.6">
+      <li><b>Tell it where home is.</b> Type your ZIP code or address below, pick it from the list, then press Save. You only do this once.</li>
+      <li><b>Click the page once for sound.</b> Browsers keep a page silent until you click it. After that, a plane overhead gets a chime and a spoken line.</li>
+      <li><b>Watch the map.</b> Planes inside your blue circle are listed on the left. One passing right overhead opens a full-screen close-up.</li>
+    </ol></div>
   <div class="set-tabs" role="tablist">
     <button role="tab" data-tab="loc" class="on">📍 Location</button>
     <button role="tab" data-tab="alerts">🔔 Alerts</button>
@@ -905,6 +935,12 @@
         <h4>⭕ Overhead distance</h4>
         <p class="hint">How close a plane has to pass to set off the overhead alerts: the full-screen close-up and the voice. It's the red dashed circle around home on the map, and changes as you drag.</p>
         <div class="row" style="align-items:center"><input type="range" id="alertMiIn" data-pref="Overhead distance" data-pref-group="Alerts and sound" data-pref-unit=" mi" min="0.2" max="5" step="0.1" aria-label="Overhead distance in miles"><b id="alertMiVal" style="min-width:64px;text-align:right;font-family:var(--mono)"></b></div>
+      </div>
+      <div class="place">
+        <h4>🌙 Quiet hours</h4>
+        <label class="chk" title="Between these times the chime and the voice stay silent. The full-screen close-up and the pop-ups still show."><input type="checkbox" id="quietOn" data-pref="Quiet hours" data-pref-group="Alerts and sound"> No chime or voice between these times</label>
+        <div class="row" style="align-items:center;gap:10px;margin-top:8px"><input type="time" id="quietFrom" aria-label="Quiet hours start" title="When the quiet hours start" style="width:auto"><span>to</span><input type="time" id="quietTo" aria-label="Quiet hours end" title="When the quiet hours end. An end earlier than the start means the next morning." style="width:auto"><b id="quietNow" style="font-size:12px;color:var(--muted)"></b></div>
+        <p class="hint">The close-up and the pop-ups still appear. Times use this device's clock.</p>
       </div>
       <div class="place">
         <h4>👀 Watch list</h4>
@@ -1072,6 +1108,12 @@
 </dialog>
 
 <button id="soundLock" type="button" hidden>🔇 Sound is off until you click this page. <b>Click here to turn on the overhead chime and voice</b></button>
+<nav id="mtabs" aria-label="Sections">
+  <button type="button" data-view="map" title="The map">🗺<span>Map</span></button>
+  <button type="button" data-view="planes" title="The planes near you, and your favorites">✈<span>Planes</span></button>
+  <button type="button" data-view="log" title="Today's numbers and log">📊<span>Log</span></button>
+  <button type="button" data-view="more" title="Feeder stats, ATC radio, Airport now and ships">☰<span>More</span></button>
+</nav>
 <div id="toasts"></div>
 
 <!-- 💡 feedback form: opened from Settings > Help, or the tray icon's menu (which opens the page with #feedback) -->
@@ -1933,6 +1975,18 @@ document.addEventListener('error', e => { // logo 404s: remember the code
 }, true);
 
 // Hover card for a plane on the map: photo, airline, model, route, altitude, speed and distance.
+// The four numbers a pilot reads first, as one strip: altitude (with a climb or descent arrow), ground speed,
+// heading (with a small arrow pointing that way) and distance from home.
+function flightStrip(a) {
+  const vr = a.vr > 300 ? ' ↑' : a.vr < -300 ? ' ↓' : '';
+  const hdg = a.track != null ? `<svg viewBox="0 0 10 10" style="transform:rotate(${Math.round(a.track)}deg)"><path d="M5 0 L9 9 L5 7 L1 9Z" fill="currentColor"/></svg>${String(Math.round(a.track) % 360).padStart(3, '0')}°` : '—';
+  return `<div class="fstrip">
+    <span title="Altitude"><i>ALT</i><b style="color:${altColor(a.alt)}">${fmtAlt(a.alt)}${vr}</b></span>
+    <span title="Ground speed"><i>GS</i><b>${speedTxt(a.gs) || '—'}</b></span>
+    <span title="Heading: the way it is flying"><i>HDG</i><b>${hdg}</b></span>
+    <span title="Distance and direction from home"><i>DIST</i><b>${a.dist != null ? distTxt(a.dist) + ' ' + compass(a.brg) : '—'}</b></span>
+  </div>`;
+}
 function planeTip(a) {
   const L_ = look(a.hex), rp = routeParts(a), sp = specialOf(a);
   const photo = L_.photo?.src ? `<img class="ph" src="${esc(L_.photo.src)}" alt="">` : '';
@@ -1945,13 +1999,11 @@ function planeTip(a) {
     <div class="pt-g">
       ${row('Aircraft', modelOf(a) || a.type)}
       ${row('Route', rp.from || rp.to ? `${rp.from || '?'} → ${rp.to || '?'}${rp.guessed ? ' (likely)' : ''}` : '')}
-      ${row('Altitude', fmtAlt(a.alt) + vr)}
-      ${row('Speed', speedTxt(a.gs))}
-      ${row('Vertical', a.vr && Math.abs(a.vr) >= 100 ? fpmTxt(a.vr) : '')}
+      ${row('Climb', a.vr && Math.abs(a.vr) >= 100 ? fpmTxt(a.vr) : '')}
       ${row('Squawk', squawkTxt(a.squawk))}
-      ${row('Distance', a.dist != null ? `${distTxt(a.dist)} ${compass(a.brg)} of home` : '')}
       ${row('Status', sp ? SPECIAL[sp].label : '')}
     </div>
+    ${flightStrip(a)}
     <div class="pt-f">Click for full details</div></div>`;
 }
 
@@ -2237,7 +2289,7 @@ function render() {
         + (isFav(a.hex, reg) ? '<span class="badge fav">⭐ FAVORITE</span>' : '')
         + (a.dist != null && a.dist < 1 ? '<span class="badge">OVERHEAD</span>' : a.dist != null && a.dist < 2 ? '<span class="badge near">NEAR</span>' : '')
         + '</span>';
-      return `<div class="card ${selected === a.hex ? 'sel' : ''} ${arrivals.has(a.hex) ? 'new' : ''} ${sp ? 'special' : ''} ${isFav(a.hex, reg) ? 'fav' : ''}" style="${sp ? `--bc:${SPECIAL[sp].color}` : ''}" data-hex="${a.hex}">
+      return `<div class="card ${selected === a.hex ? 'sel' : ''} ${arrivals.has(a.hex) ? 'new' : ''} ${sp ? 'special' : ''} ${isFav(a.hex, reg) ? 'fav' : ''}" style="--alt:${altColor(a.alt)};${sp ? `--bc:${SPECIAL[sp].color}` : ''}" data-hex="${a.hex}">
         ${photo ? `<div class="thumb" style="background-image:url('${photo}')" title="${L.photo.stock ? 'Stock photo of this model (not this exact aircraft)' : ''}">${L.photo.stock ? '<span class="stock-tag">Model photo</span>' : ''}</div>` : ''}
         <div style="min-width:0">
           <div class="row1"><span class="cs">${a.flight && a.flight !== reg ? a.flight : reg ? tailLink(a.hex, reg) : a.hex.toUpperCase()}</span><span class="reg">${a.flight && reg && reg !== a.flight ? tailLink(a.hex, reg) : ''}</span>${badge}</div>
@@ -2245,14 +2297,12 @@ function render() {
           <div class="route ${routeOf(a) ? '' : 'none'}">${routeOf(a) || 'Route not published'}</div>
           <div class="model">${ownerOf(a) ? 'Owner: ' + ownerOf(a) : 'Owner not listed'}</div>
           <div class="metrics">
-            <span style="color:${altColor(a.alt)}">${fmtAlt(a.alt)}${vr}</span>
-            <span>${speedTxt(a.gs, true)}</span>
-            <span>${a.dist != null ? distTxt(a.dist).replace(/ (\w+)$/, ' <em>$1 ' + compass(a.brg) + '</em>') : ''}</span>
             ${trackedFor(a) ? `<span title="Time since it was first tracked">⏱ ${trackedFor(a)}</span>` : ''}
             ${adsbxBtn(a.hex, a.flight || reg, '🌐 ADSBx', 'chip')}
             ${favBtn(a.hex, reg)}
           </div>
         </div>
+        ${flightStrip(a)}
       </div>`;
     }).join('');
   }
@@ -2553,7 +2603,7 @@ claimSpeaker();
 setInterval(claimSpeaker, 3000);
 document.addEventListener('visibilitychange', claimSpeaker);
 function prepareAnnouncement(a) {
-  if (!isSpeaker) return;
+  if (!isSpeaker || isQuiet()) return;
   const voice = kokoroVoice();
   if (!soundOn || !voice || failedVoices.has('kokoro:' + voice)) return;
   const text = announcementText(a), p = prepared.get(a.hex);
@@ -2639,7 +2689,7 @@ function fillSay(template, value) {
 const announcementText = a => fillSay(sayTemplate, k => SAY_TAGS[k][1](a));
 
 function alertSound(hex) {
-  if (!soundOn || !isSpeaker) return;
+  if (!soundOn || !isSpeaker || isQuiet()) return;
   unlockAudio();
   const played = chime();
   if (!played) showSoundLock(true); // the browser hasn't been clicked yet: ask for one
@@ -3062,6 +3112,7 @@ function updateEmergencyBar() {
 $('emergencyBar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) select(b.dataset.hex, true); });
 
 function select(hex, pan) {
+  if (hex && pan && document.body.dataset.view !== 'map' && matchMedia('(max-width: 960px)').matches) showView('map');
   selected = hex;
   const t = hex && tracks.get(hex);
   if (t && pan) map.panTo([t.aircraft.lat, t.aircraft.lon]);
@@ -4361,7 +4412,7 @@ function demoTick() {
 
 // ---------- a short spoken line with the chosen voice (watch list and emergencies) ----------
 function speak(text) {
-  if (!soundOn || !isSpeaker) return;
+  if (!soundOn || !isSpeaker || isQuiet()) return;
   chime();
   if (kokoroVoice() && !failedVoices.has(voiceName)) sayKokoro(text, kokoroVoice()); else say(text);
 }
@@ -4506,10 +4557,13 @@ async function drawTrails() {
   let j;
   try { j = await fetch('/api/trails?mins=' + trailMins).then(r => r.json()); } catch (e) { return; }
   hourTrails.clearLayers();
-  for (const p of Object.values(j.planes)) {
+  // lots of planes (a big radius on a busy day): keep every 2nd or 3rd point and let the map simplify the lines
+  const all = Object.values(j.planes), step = all.length > 220 ? 3 : all.length > 110 ? 2 : 1;
+  for (const p of all) {
+    if (step > 1) p.p = p.p.filter((q, i) => i % step === 0 || i === p.p.length - 1);
     let seg = [], alts = [];
     const flush = () => {
-      if (seg.length > 1) L.polyline(seg, { renderer: trailCanvas, color: altColor(alts[alts.length >> 1] ?? null), weight: 1.5, opacity: trailStr * .9, interactive: false }).addTo(hourTrails);
+      if (seg.length > 1) L.polyline(seg, { renderer: trailCanvas, color: altColor(alts[alts.length >> 1] ?? null), weight: 1.5, opacity: trailStr * .9, interactive: false, smoothFactor: 2 }).addTo(hourTrails);
       seg = []; alts = [];
     };
     p.p.forEach((q, i) => {
@@ -4613,6 +4667,36 @@ function summaryCard() {
   a.download = `PorchRadar-${D.day}.png`; a.href = c.toDataURL('image/png'); a.click();
 }
 $('tdCard').onclick = summaryCard;
+
+// ---------- quiet hours (Settings > Alerts): no chime or voice between two times of day ----------
+var quietOn = load('skyQuiet', false), quietFrom = load('skyQuietFrom', '22:00'), quietTo = load('skyQuietTo', '07:00');
+function isQuiet(now = new Date()) {
+  if (!quietOn) return false;
+  const mins = s => { const [hh, mm] = String(s).split(':').map(Number); return hh * 60 + (mm || 0); };
+  const t = now.getHours() * 60 + now.getMinutes(), a = mins(quietFrom), b = mins(quietTo);
+  return a === b ? false : a < b ? t >= a && t < b : t >= a || t < b; // an end before the start runs past midnight
+}
+function showQuiet() {
+  $('quietOn').checked = quietOn; $('quietFrom').value = quietFrom; $('quietTo').value = quietTo;
+  $('quietNow').textContent = !quietOn ? '' : isQuiet() ? 'quiet right now' : 'not quiet right now';
+}
+showQuiet();
+$('quietOn').addEventListener('change', e => { quietOn = e.target.checked; save('skyQuiet', quietOn); showQuiet(); });
+$('quietFrom').addEventListener('change', e => { if (e.target.value) { quietFrom = e.target.value; save('skyQuietFrom', quietFrom); } showQuiet(); });
+$('quietTo').addEventListener('change', e => { if (e.target.value) { quietTo = e.target.value; save('skyQuietTo', quietTo); } showQuiet(); });
+console.assert(((f, t, on) => { const o = [quietOn, quietFrom, quietTo]; quietOn = on; quietFrom = f; quietTo = t; const r = [isQuiet(new Date(2026, 0, 1, 23, 0)), isQuiet(new Date(2026, 0, 1, 6, 59)), isQuiet(new Date(2026, 0, 1, 12, 0))]; [quietOn, quietFrom, quietTo] = o; return r.join(); })('22:00', '07:00', true) === 'true,true,false', 'quiet hours check failed');
+
+// ---------- phones: a bar at the bottom switches between the map, the planes, the log and the rest ----------
+function showView(v) {
+  if (!['map', 'planes', 'log', 'more'].includes(v)) v = 'map';
+  document.body.dataset.view = v; save('skyView', v);
+  document.querySelectorAll('#mtabs button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  if (v === 'map') setTimeout(() => map.invalidateSize(), 60);
+  if (v === 'log') $('today').open = true;
+  window.scrollTo(0, 0);
+}
+$('mtabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showView(b.dataset.view); });
+showView(load('skyView', 'map'));
 
 // ---------- tooltips: every option explains itself when you hover it ----------
 // One list, so the wording is easy to find and fix. Controls that already carry their own title keep it.
