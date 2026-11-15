@@ -406,15 +406,15 @@
   dialog.set-dlg .welcome { grid-area: welcome; margin: 0 22px 12px; }
   .set-tabs { grid-area: tabs; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px; overflow-y: auto; background: var(--bg); border-top: 1px solid var(--line); border-right: 1px solid var(--line); }
   .set-tabs button { background: none; border: 0; border-radius: 10px; color: var(--muted); font: 600 13.5px Inter, sans-serif; padding: 9px 12px; cursor: pointer; text-align: left; white-space: nowrap; }
-  .set-tabs button:nth-child(4), .set-tabs button:nth-child(8) { margin-top: 10px; position: relative; }
-  .set-tabs button:nth-child(4)::before, .set-tabs button:nth-child(8)::before { content: ''; position: absolute; left: 12px; right: 12px; top: -6px; border-top: 1px solid var(--line); }
+  .set-tabs .tab-g { margin: 12px 12px 3px; font: 700 10px Inter, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); opacity: .8; }
+  .set-tabs .tab-g:first-child { margin-top: 2px; }
   .set-tabs button:hover { color: var(--text); background: var(--panel-2); }
   .set-tabs button.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
   .set-body { grid-area: body; padding: 18px 22px; overflow-y: auto; border-top: 1px solid var(--line); }
   @media (max-width: 700px) {
     dialog.set-dlg { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "welcome" "tabs" "body" "foot"; }
     .set-tabs { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 8px 10px; border-right: 0; }
-    .set-tabs button:nth-child(4), .set-tabs button:nth-child(8) { margin-top: 0; }
+    .set-tabs .tab-g { display: none; }
     .set-tabs button:nth-child(4)::before, .set-tabs button:nth-child(8)::before { display: none; }
   }
   .set-foot { grid-area: foot; display: flex; gap: 8px; justify-content: flex-end; padding: 12px 22px; border-top: 1px solid var(--line); background: var(--panel); }
@@ -688,6 +688,18 @@
   .poi span { font: 700 11px Inter, sans-serif; color: #fff; background: rgba(11,16,32,.85); border: 1px solid var(--c); padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
 
   @media (max-width: 960px) {
+    /* a compact top bar: name and Settings on one row, the two menus on the next, the radius under them */
+    header { position: relative; z-index: 5; padding: 8px 12px; gap: 6px 8px; }
+    header .brand { order: 1; font-size: 17px; flex: 1 1 auto; }
+    main { position: relative; z-index: 0; } /* keeps the map under an open top-bar menu */
+    header .brand-pre, header .btn-txt, header .lan-addr, header .spacer, header #liveTxt, header .lm-count { display: none; }
+    header .live { order: 2; }
+    header #homeBtn { order: 3; margin-left: auto; padding: 5px 11px; font-size: 16px; }
+    header .layers-menu { order: 4; flex: 1 1 40%; position: static; }
+    header .layers-menu > summary { text-align: center; }
+    header .layers-pop { left: 12px; right: 12px; width: auto; top: auto; margin-top: 6px; }
+    header .ctl { order: 5; flex: 1 1 100%; display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    header .ctl input { flex: 1; }
     /* one section at a time, picked with the bar at the bottom */
     body { padding-bottom: 60px; }
     #mtabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2400; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
@@ -707,7 +719,7 @@
     aside { grid-template-columns: minmax(0, 1fr); }
     #map { height: calc(55vh / var(--ui)); }
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px 16px; }
-    header, main { padding-left: 16px; padding-right: 16px; }
+    main { padding-left: 12px; padding-right: 12px; }
   }
   /* ---- polish: themed scrollbars and map buttons, depth on the floating panels, calmer far-away planes ---- */
   * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 35%, var(--line)) transparent; }
@@ -767,7 +779,7 @@
 <header>
   <div class="brand" title="May the Schwartz be with your radar">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
-    KrabbzDev's Porch Radar
+    <span><span class="brand-pre">KrabbzDev's </span>Porch Radar</span>
   </div>
   <span class="live" id="live"><i></i><span id="liveTxt">Connecting…</span></span>
   <span class="lan-addr" id="lanAddr" hidden title="Network access is on (Settings → Network): other devices on your network can open the dashboard at these addresses"></span>
@@ -810,7 +822,7 @@
       <label class="chk vol" title="Volume of the chime and the voice"><span aria-hidden="true">🔉</span><input type="range" id="volIn" data-pref="Volume" data-pref-group="Alerts and sound" data-pref-scale="100" data-pref-unit="%" min="0" max="1" step="0.05" aria-label="Volume"><b id="volVal"></b></label>
     </div>
   </details>
-  <button id="homeBtn">⚙ Settings</button>
+  <button id="homeBtn">⚙<span class="btn-txt"> Settings</span></button>
 </header>
 
 <section class="stats">
@@ -886,10 +898,23 @@
       <li><b>Watch the map.</b> Planes inside your blue circle are listed on the left. One passing right overhead opens a full-screen close-up.</li>
     </ol></div>
   <div class="set-tabs" role="tablist">
-    <button role="tab" data-tab="loc" class="on">📍 Location</button>
+    <h6 class="tab-g">You</h6>
+    <button role="tab" data-tab="loc" class="on">📍 Home</button>
     <button role="tab" data-tab="alerts">🔔 Alerts</button>
-    <button role="tab" data-tab="display">🖥 Display</button>
-    <button role="tab" data-tab="ships">🚢 Ships</button><button role="tab" data-tab="flights">✈️ Flights</button><button role="tab" data-tab="feeder">📡 Feeder</button><button role="tab" data-tab="network">🌐 Network</button><button role="tab" data-tab="updates">⬆ Updates</button><button role="tab" data-tab="news">🆕 What's new</button><button role="tab" data-tab="help">🐞 Help</button><button role="tab" data-tab="credits">🙏 Credits</button><button role="tab" data-tab="reset">↺ Reset</button>
+    <h6 class="tab-g">Map and look</h6>
+    <button role="tab" data-tab="map">🗺 Map lines</button>
+    <button role="tab" data-tab="display">🖥 Look</button>
+    <h6 class="tab-g">Extra data</h6>
+    <button role="tab" data-tab="ships">🚢 Ships</button>
+    <button role="tab" data-tab="flights">✈️ Flights</button>
+    <button role="tab" data-tab="feeder">📡 Feeder</button>
+    <h6 class="tab-g">The app</h6>
+    <button role="tab" data-tab="network">🌐 Network</button>
+    <button role="tab" data-tab="updates">⬆ Updates</button>
+    <button role="tab" data-tab="news">✨ What's new</button>
+    <button role="tab" data-tab="help">❓ Help</button>
+    <button role="tab" data-tab="credits">🙏 Credits</button>
+    <button role="tab" data-tab="reset">↺ Reset</button>
   </div>
 
   <div class="set-body">
@@ -987,6 +1012,15 @@
         </select>
       </div>
       <div class="place">
+        <h4>📏 Units</h4>
+        <label class="chk"><input type="checkbox" id="nauticalIn" data-pref="Pilot units (knots, nautical miles)" data-pref-group="Display"> Pilot units: speeds in knots, distances in nautical miles</label>
+        <p class="hint">Off: miles per hour and miles. Altitudes are always in feet. The voice uses the same units.</p>
+      </div>
+    </section>
+    <!-- Map lines: how the sweep and the lines behind planes look -->
+    <section data-pane="map" hidden>
+      <p class="hint">Turn these on or off in 🗺 Map Options on the main page. Here you set how they look.</p>
+      <div class="place">
         <h4>📡 Radar sweep strength</h4>
         <p class="hint">How strong the beam looks when 📡 Radar sweep is on (Map Options). Lower is fainter. Changes right away.</p>
         <div class="row" style="align-items:center"><input type="range" id="sweepStrIn" min="0.1" max="1" step="0.05" aria-label="Radar sweep strength" data-pref="Radar sweep strength" data-pref-group="Display" data-pref-scale="100" data-pref-unit="%"><b id="sweepStrVal" style="min-width:64px;text-align:right;font-family:var(--mono)"></b></div>
@@ -1002,11 +1036,6 @@
         <select id="trailMinsIn" data-pref="Trail length" data-pref-group="Display" style="width:100%" aria-label="Trail length">
           <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour (default)</option><option value="180">3 hours</option>
         </select>
-      </div>
-      <div class="place">
-        <h4>📏 Units</h4>
-        <label class="chk"><input type="checkbox" id="nauticalIn" data-pref="Pilot units (knots, nautical miles)" data-pref-group="Display"> Pilot units: speeds in knots, distances in nautical miles</label>
-        <p class="hint">Off: miles per hour and miles. Altitudes are always in feet. The voice uses the same units.</p>
       </div>
     </section>
 
@@ -1159,6 +1188,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const DEMO = new URLSearchParams(location.search).has('demo');
+// ?selftest: used by test/smoke.js before each release. Any error while loading, a map with no size, an empty list
+// or a control without a tooltip is written to <body data-selftest>, where the test reads it ("ok" when all is well).
+if (new URLSearchParams(location.search).has('selftest')) {
+  const errs = [];
+  addEventListener('error', e => errs.push('error: ' + e.message + (e.lineno ? ' (line ' + e.lineno + ')' : '')));
+  addEventListener('unhandledrejection', e => errs.push('error: ' + (e.reason && e.reason.message || e.reason)));
+  setTimeout(() => {
+    const shown = el => el.getClientRects().length > 0;
+    const mapEl = document.getElementById('map'), r = mapEl.getBoundingClientRect();
+    if (shown(mapEl) && (r.width < 100 || r.height < 100)) errs.push('the map has no size (' + Math.round(r.width) + ' x ' + Math.round(r.height) + ')');
+    if (!document.querySelectorAll('#cards .card').length) errs.push('no planes are listed');
+    const noTip = [...document.querySelectorAll('input,select,textarea,button')].filter(el => el.type !== 'hidden' && !(el.title || el.closest('label')?.title));
+    if (noTip.length) errs.push('no tooltip on: ' + noTip.map(el => el.id || el.className || el.tagName).join(', '));
+    document.body.dataset.selftest = errs.length ? 'FAIL ' + errs.join('; ') : 'ok';
+  }, 7000);
+}
 const MI = 1609.344;
 const $ = id => document.getElementById(id);
 
@@ -4691,7 +4736,10 @@ function showView(v) {
   if (!['map', 'planes', 'log', 'more'].includes(v)) v = 'map';
   document.body.dataset.view = v; save('skyView', v);
   document.querySelectorAll('#mtabs button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
-  if (v === 'map') setTimeout(() => map.invalidateSize(), 60);
+  if (v === 'map') setTimeout(() => {
+    map.invalidateSize();
+    if (!showView.fitted && home) { showView.fitted = true; fitRadius(); } // first look at the map: it had no size while another section showed
+  }, 60);
   if (v === 'log') $('today').open = true;
   window.scrollTo(0, 0);
 }
@@ -4723,9 +4771,10 @@ const TIPS = {
   '#aptNowSel': 'The airport to show the runway in use, wind and forecast for. The 25 closest to home are listed.',
   // settings dialog
   '#setX': 'Close Settings without saving your changes.',
-  '.set-tabs [data-tab="loc"]': 'Where home is, and an optional second place.',
+  '.set-tabs [data-tab="loc"]': 'Where home is, and an optional second place such as work.',
   '.set-tabs [data-tab="alerts"]': 'The overhead alert distance, watch list, emergency bar and the announcement voice and words.',
-  '.set-tabs [data-tab="display"]': 'Size, theme, map lines, units and other looks.',
+  '.set-tabs [data-tab="map"]': 'How the radar sweep, the flight history lines and the plane tails look.',
+  '.set-tabs [data-tab="display"]': 'The size of everything, the color theme and the units.',
   '.set-tabs [data-tab="ships"]': 'Live ships and cruise ships: your free AISStream key and which cruise lines to show.',
   '.set-tabs [data-tab="flights"]': 'Optional FlightAware key, for the real route and times of each flight.',
   '.set-tabs [data-tab="feeder"]': 'Your FlightAware feeder stats, and an optional contact for the data sites.',

@@ -69,7 +69,7 @@ function get(url, timeoutMs = 6000) {
     // Planespotters requires a contact URL or email in the User-Agent: the user's own contact (Settings),
     // else their FlightAware page. Without one, photos fall back to stock model photos.
     const contact = process.env.CONTACT || contactSetting() || (faUser() ? 'https://www.flightaware.com/adsb/stats/user/' + faUser() : '');
-    const ua = `Krabbz9999FlightTracker/1.0 (${contact ? '+' + contact : 'home dashboard'})`;
+    const ua = `KrabbzDevPorchRadar/1.0 (${contact ? '+' + contact : 'home dashboard'})`;
     const req = lib.get(url, { headers: { 'User-Agent': ua }, timeout: timeoutMs }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();

@@ -8,6 +8,8 @@ rem Usage:  release.cmd "What changed in this build"
 rem Needs: Node.js and Git (signed in to GitHub).
 cd /d "%~dp0"
 if "%~1"=="" ( echo Usage: release.cmd "What changed" & exit /b 1 )
+rem nothing is published unless the checks pass (test\smoke.js)
+node test\smoke.js || exit /b 1
 node -e "const f='version.json',fs=require('fs'),v=JSON.parse(fs.readFileSync(f,'utf8')),d=new Date(),today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');if(v.date===today){v.patch=(v.patch||0)+1}else{v.build++;v.patch=0}v.date=today;fs.writeFileSync(f,JSON.stringify(v)+'\n')" || exit /b 1
 for /f %%v in ('node -p "require('./version.json').version"') do set VER=%%v
 for /f %%b in ('node -p "const v=require('./version.json');v.build+(v.patch?'.'+v.patch:'')"') do set BUILD=%%b

@@ -22,6 +22,12 @@ jobs:
         with:
           node-version: 24
 
+      - name: Check the app before building
+        shell: pwsh
+        run: |
+          node test/smoke.js
+          if ($LASTEXITCODE) { throw 'The release checks failed' }
+
       - name: Build the single .exe
         shell: pwsh
         run: |
