@@ -907,6 +907,11 @@
         <div class="row" style="align-items:center"><input type="range" id="sweepStrIn" min="0.1" max="1" step="0.05" aria-label="Radar sweep strength" data-pref="Radar sweep strength" data-pref-group="Display" data-pref-scale="100" data-pref-unit="%"><b id="sweepStrVal" style="min-width:64px;text-align:right;font-family:var(--mono)"></b></div>
       </div>
       <div class="place">
+        <h4>〰 Trail strength</h4>
+        <p class="hint">How strong the plane trails look on the map: the last-hour lines (〰 Trails in Map Options) and the short line behind each plane. Lower is fainter. Changes right away.</p>
+        <div class="row" style="align-items:center"><input type="range" id="trailStrIn" min="0.05" max="1" step="0.05" aria-label="Trail strength" data-pref="Trail strength" data-pref-group="Display" data-pref-scale="100" data-pref-unit="%"><b id="trailStrVal" style="min-width:64px;text-align:right;font-family:var(--mono)"></b></div>
+      </div>
+      <div class="place">
         <h4>📏 Units</h4>
         <label class="chk"><input type="checkbox" id="nauticalIn" data-pref="Pilot units (knots, nautical miles)" data-pref-group="Display"> Pilot units: speeds in knots, distances in nautical miles</label>
         <p class="hint">Off: miles per hour and miles. Altitudes are always in feet. The voice uses the same units.</p>
@@ -2093,7 +2098,7 @@ function update(list) {
       }
       t.marker.setZIndexOffset(specialOf(a) ? 700 : a.inside ? 500 : 0);
       if (a.inside && t.points.length > 1) {
-        if (!t.trail) t.trail = L.polyline(t.points, { weight: 2, opacity: .55, interactive: false }).addTo(trailLayer);
+        if (!t.trail) t.trail = L.polyline(t.points, { weight: 2, opacity: Math.min(1, trailStr * 1.1), interactive: false }).addTo(trailLayer);
         t.trail.setLatLngs(t.points).setStyle({ color: altColor(a.alt) });
         if (!trailLayer.hasLayer(t.trail)) trailLayer.addLayer(t.trail);
       } else if (t.trail) trailLayer.removeLayer(t.trail);
@@ -4344,6 +4349,15 @@ setInterval(loadAptNow, 5 * 60000);
 // ---------- trails: where every plane flew in the last hour, as faint lines (〰 Trails in Map Options) ----------
 map.createPane('trails').style.zIndex = 390; // under the airports and planes
 var trailsOn = load('skyTrails', false);
+// 0.05 to 1 (default 0.5): how strong trails look. The last-hour lines use 90% of it, the live line behind each plane 110%.
+var trailStr = load('skyTrailStr', 0.5);
+const showTrailStr = () => { $('trailStrIn').value = trailStr; $('trailStrVal').textContent = Math.round(trailStr * 100) + '%'; };
+showTrailStr();
+$('trailStrIn').addEventListener('input', e => {
+  trailStr = +e.target.value; save('skyTrailStr', trailStr); showTrailStr();
+  hourTrails.eachLayer(l => l.setStyle({ opacity: trailStr * .9 }));
+  trailLayer.eachLayer(l => l.setStyle({ opacity: Math.min(1, trailStr * 1.1) }));
+});
 const hourTrails = L.layerGroup().addTo(map), trailCanvas = L.canvas({ pane: 'trails' });
 async function drawTrails() {
   if (!trailsOn) return hourTrails.clearLayers();
@@ -4353,7 +4367,7 @@ async function drawTrails() {
   for (const p of Object.values(j.planes)) {
     let seg = [], alts = [];
     const flush = () => {
-      if (seg.length > 1) L.polyline(seg, { renderer: trailCanvas, color: altColor(alts[alts.length >> 1] ?? null), weight: 1.5, opacity: .45, interactive: false }).addTo(hourTrails);
+      if (seg.length > 1) L.polyline(seg, { renderer: trailCanvas, color: altColor(alts[alts.length >> 1] ?? null), weight: 1.5, opacity: trailStr * .9, interactive: false }).addTo(hourTrails);
       seg = []; alts = [];
     };
     p.p.forEach((q, i) => {
