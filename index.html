@@ -719,7 +719,7 @@
       <label class="chk" title="Shade the part of the map where it's night right now"><input type="checkbox" id="nightOn" data-pref="Day/Night" data-pref-group="Map options"> 🌙 Day/Night</label>
       <label class="chk" title="Live rain radar on the map (US, refreshes every 5 minutes)"><input type="checkbox" id="wxOn" data-pref="Weather radar" data-pref-group="Map options"> 🌧 Show Weather</label>
       <label class="chk" title="A radar beam sweeping round your Tracker Radius"><input type="checkbox" id="sweepOn" data-pref="Radar sweep" data-pref-group="Map options"> 📡 Radar sweep</label>
-      <label class="chk" title="Faint lines showing where every plane flew in the last hour: the arrival and departure paths show up"><input type="checkbox" id="trailsOn" data-pref="Trails" data-pref-group="Map options"> 〰 Trails (last hour)</label>
+      <label class="chk" title="Faint lines showing where every plane has flown recently (the length is in Settings, Display): the arrival and departure paths show up"><input type="checkbox" id="trailsOn" data-pref="Trails" data-pref-group="Map options"> 〰 Trails</label>
       <label class="chk" title="Cruise ships and other boats, live (needs a free AISStream.io key in Settings)"><input type="checkbox" id="shipsOn" data-pref="Ships" data-pref-group="Map options"> 🚢 Show Ships</label>
       <h5>Look</h5>
       <label class="chk" title="How the map looks"><span>🌍 Map</span>
@@ -911,6 +911,13 @@
         <h4>〰 Trail strength</h4>
         <p class="hint">How strong the plane trails look on the map: the last-hour lines (〰 Trails in Map Options) and the short line behind each plane. Lower is fainter. Changes right away.</p>
         <div class="row" style="align-items:center"><input type="range" id="trailStrIn" min="0.05" max="1" step="0.05" aria-label="Trail strength" data-pref="Trail strength" data-pref-group="Display" data-pref-scale="100" data-pref-unit="%"><b id="trailStrVal" style="min-width:64px;text-align:right;font-family:var(--mono)"></b></div>
+      </div>
+      <div class="place">
+        <h4>〰 Trail length</h4>
+        <p class="hint">How far back the map's trail lines go (〰 Trails in Map Options). Shorter keeps the map cleaner. Changes right away. The app only remembers the last 3 hours, and starts counting again whenever it restarts.</p>
+        <select id="trailMinsIn" data-pref="Trail length" data-pref-group="Display" style="width:100%" aria-label="Trail length">
+          <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour (default)</option><option value="180">3 hours</option>
+        </select>
       </div>
       <div class="place">
         <h4>📏 Units</h4>
@@ -4354,6 +4361,9 @@ setInterval(loadAptNow, 5 * 60000);
 map.createPane('trails').style.zIndex = 390; // under the airports and planes
 var trailsOn = load('skyTrails', true);
 // 0.05 to 1 (default 0.25): how strong trails look. The last-hour lines use 90% of it, the live line behind each plane 110%.
+var trailMins = load('skyTrailMins', 60); // how many minutes back the trail lines go: 15, 30, 60 or 180
+$('trailMinsIn').value = trailMins;
+$('trailMinsIn').addEventListener('change', e => { trailMins = +e.target.value; save('skyTrailMins', trailMins); drawTrails(); });
 var trailStr = load('skyTrailStr', 0.25);
 const showTrailStr = () => { $('trailStrIn').value = trailStr; $('trailStrVal').textContent = Math.round(trailStr * 100) + '%'; };
 showTrailStr();
@@ -4366,7 +4376,7 @@ const hourTrails = L.layerGroup().addTo(map), trailCanvas = L.canvas({ pane: 'tr
 async function drawTrails() {
   if (!trailsOn) return hourTrails.clearLayers();
   let j;
-  try { j = await fetch('/api/trails?mins=60').then(r => r.json()); } catch (e) { return; }
+  try { j = await fetch('/api/trails?mins=' + trailMins).then(r => r.json()); } catch (e) { return; }
   hourTrails.clearLayers();
   for (const p of Object.values(j.planes)) {
     let seg = [], alts = [];
