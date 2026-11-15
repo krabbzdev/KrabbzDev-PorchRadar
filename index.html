@@ -188,6 +188,7 @@
   .an-chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--text); text-decoration: none; }
   .an-chip:hover { border-color: var(--accent); }
   .an-chip small { color: var(--muted); }
+  .leaflet-trails-pane canvas { pointer-events: none; } /* trail lines sit above the TFR areas: let hovering and clicking through */
   .replay-ctl { display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 10px; padding: 4px 6px; color: var(--text); font-size: 12px; }
   .replay-ctl button { font-size: 12px; padding: 3px 8px; }
   .replay-ctl #rpBar { display: inline-flex; align-items: center; gap: 8px; }
@@ -1493,7 +1494,7 @@ const tfrLayer = L.layerGroup().addTo(map);
 let tfrOn = load('skyTfrs', false);
 $('tfrOn').checked = tfrOn;
 const TFR_TYPE = { SECURITY: 'Security (VIP visit, stadium, military)', HAZARDS: 'Hazard (fire, disaster, rescue)', SPACE: 'Space launch or recovery',
-  'SPECIAL': 'Special event', 'AIR SHOWS/SPORTS': 'Air show or sporting event', 'VIP': 'VIP movement', '91.141': 'VIP movement (President)', '99.7': 'Special security instructions' };
+  'SPACE OPERATIONS': 'Space launch or recovery', 'SPECIAL': 'Special event', 'AIR SHOWS/SPORTS': 'Air show or sporting event', 'VIP': 'VIP movement', '91.141': 'VIP movement (President)', '99.7': 'Special security instructions' };
 async function loadTfrs() {
   tfrLayer.clearLayers();
   if (!tfrOn) return;
@@ -1502,11 +1503,18 @@ async function loadTfrs() {
   if (!tfrOn) return;
   tfrLayer.clearLayers();
   for (const t of list) {
-    const type = TFR_TYPE[String(t.type).toUpperCase()] || t.type;
+    const type = TFR_TYPE[String(t.type).toUpperCase()] || t.type, g = t.geometry;
+    // size and distance from home, worked out from the outline: the FAA list has no altitudes or times (they are on its page)
+    const pts = g.coordinates.flat(g.type === 'Polygon' ? 1 : 2).filter(c => c.length >= 2 && isFinite(c[0]));
+    const lats = pts.map(c => c[1]), lons = pts.map(c => c[0]);
+    const across = Math.max(distMi([Math.min(...lats), Math.min(...lons)], [Math.min(...lats), Math.max(...lons)]), distMi([Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.min(...lons)]));
+    const homeD = home && pts.length ? Math.min(...pts.map(c => distMi(home, [c[1], c[0]]))) : null;
+    const m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(t.modified || ''), upd = m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null;
+    const row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : '';
     L.geoJSON({ type: 'Feature', geometry: t.geometry }, { pane: 'tfrs', style: { color: '#ff3b5c', weight: 2, fillColor: '#ff3b5c', fillOpacity: .15, dashArray: '6 4' } })
-      .bindTooltip(`<b>⛔ TFR ${esc(t.id)}</b><small>${esc(t.title)}</small>`, { className: 'apt-tip', sticky: true })
+      .bindTooltip(`<b>⛔ TFR ${esc(t.id)}</b><small>${esc(t.title)}</small><small>${esc(type || '')}${homeD != null ? ' · ' + distTxt(homeD) + ' from home' : ''} · click for more</small>`, { className: 'apt-tip', sticky: true })
       .bindPopup(`<div class="apt-card"><div class="apt-head"><span class="apt-kind" style="--c:#ff3b5c">⛔ Temporary flight restriction</span><b>${esc(t.title || t.id)}</b><small>NOTAM ${esc(t.id)}</small></div>
-        <table class="apt-tbl"><tr><th>Type</th><td>${esc(type || '—')}</td></tr><tr><th>State</th><td>${esc(t.state || '—')}</td></tr></table>
+        <table class="apt-tbl">${row('Type', esc(type || '—'))}${row('State', esc(t.state || '—'))}${row('Control center', esc(t.center))}${row('Size', 'about ' + distTxt(across, 0) + ' across')}${row('Nearest edge', homeD != null ? distTxt(homeD) + ' from home' : '')}${row('List updated', upd ? ago(upd) : '')}</table>
         <p class="apt-about" style="margin-top:8px">Aircraft may not fly in this area without permission while it's active. Altitudes and times are on the FAA's page.</p>
         <div class="apt-links"><a href="${esc(t.link)}" target="_blank" rel="noopener">Full details on tfr.faa.gov ↗</a></div></div>`, { className: 'apt-pop', maxWidth: 340, minWidth: 280 })
       .addTo(tfrLayer);

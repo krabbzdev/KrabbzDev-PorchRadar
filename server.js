@@ -376,7 +376,7 @@ async function tfrs() {
   const round = c => Array.isArray(c[0]) ? c.map(round) : [+c[0].toFixed(4), +c[1].toFixed(4)];
   const data = (JSON.parse(r.body).features || []).filter(f => f.geometry && /Polygon/.test(f.geometry.type)).map(f => {
     const p = f.properties || {}, key = String(p.NOTAM_KEY || ''), m = key.match(/^(\d+)\/(\d+)/);
-    return { id: key.split('-')[0], title: p.TITLE || '', type: p.LEGAL || '', state: p.STATE || '',
+    return { id: key.split('-')[0], title: p.TITLE || '', type: p.LEGAL || '', state: p.STATE || '', center: p.CNS_LOCATION_ID || '', modified: p.LAST_MODIFICATION_DATETIME || '',
       link: m ? `https://tfr.faa.gov/tfr3/?page=detail_${m[1]}_${m[2]}` : 'https://tfr.faa.gov/',
       geometry: { type: f.geometry.type, coordinates: round(f.geometry.coordinates) } };
   });
