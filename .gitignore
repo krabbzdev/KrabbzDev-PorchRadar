@@ -27,3 +27,4 @@ browser-window/
 app.log
 app.old.log
 node_modules/
+records.json

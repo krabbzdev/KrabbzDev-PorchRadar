@@ -59,6 +59,7 @@ const contactSetting = () => 'contact' in settings ? settings.contact : DEFAULT_
 
 const lookupCache = new Map(); // hex|callsign -> {photo, info, flight}
 const firstSeen = new Map();   // hex -> {first, last} (ms)
+const posLog = [], POS_LOG_MS = 3 * 3600e3; // [hex, lat, lon, alt, time, label] of every plane for the last 3 hours: map trails and replay
 const trackHist = new Map();   // hex -> [[lat, lon, alt, time], ...] while the aircraft is in range
 
 function get(url, timeoutMs = 6000) {
@@ -311,6 +312,20 @@ function loadAirportDetails() {
   return airportDetails;
 }
 
+// The forecast (TAF) for a weather station, as the raw text pilots read; only larger airports have one. Kept 30 minutes.
+const tafCache = new Map();
+async function tafFor(id) {
+  const hit = tafCache.get(id);
+  if (hit && Date.now() - hit.at < 30 * 60e3) return hit.data;
+  let data = '';
+  try {
+    const r = await get('https://aviationweather.gov/api/data/taf?format=json&ids=' + encodeURIComponent(id), 8000);
+    data = r.status === 200 && r.body.length ? String((JSON.parse(r.body)[0] || {}).rawTAF || '') : '';
+  } catch (e) { return hit ? hit.data : ''; }
+  tafCache.set(id, { at: Date.now(), data });
+  if (tafCache.size > 200) tafCache.delete(tafCache.keys().next().value);
+  return data;
+}
 const metarCache = new Map(); // ident -> { at, data }
 async function metarFor(codes, lat, lon) {
   const key = codes.join(',') || `${lat},${lon}`, hit = metarCache.get(key);
@@ -438,7 +453,8 @@ async function airportInfo(ident) {
     metarFor([...new Set([d.icao, d.gps, /^[A-Z]{4}$/.test(ident) ? ident : ''].filter(Boolean))], lat, lon),
     d.wiki ? airportWiki(d.wiki) : null,
   ]);
-  return { ident, type, iata, name, lat, lon, elev, city, ...d, weather, wikiInfo: wiki };
+  const taf = weather && /^[A-Z]{4}$/.test(weather.station || '') ? await tafFor(weather.station) : '';
+  return { ident, type, iata, name, lat, lon, elev, city, ...d, weather, taf, wikiInfo: wiki };
 }
 
 // ---------- aircraft data: adsb.fi public feed ----------
@@ -476,12 +492,13 @@ async function refreshAircraft() {
   const now = Date.now();
   for (const a of j.aircraft || []) {
     let f = firstSeen.get(a.hex);
-    if (!f || now - f.last > 10 * 60000) firstSeen.set(a.hex, f = { first: now, last: now, pos: null });
+    if (!f || now - f.last > 10 * 60000) firstSeen.set(a.hex, f = { first: now, last: now, pos: null, nw: !planesSeen[String(a.hex).toLowerCase()] });
     else f.last = now;
     // first position we heard, used by the page to work out where a local flight departed from
     if (!f.pos && a.lat != null) f.pos = [a.lat, a.lon, a.alt_baro ?? null];
     rememberPlane(a, now);
     a.first_seen = f.first;
+    if (f.nw) a.nw = 1; // not seen here in the last 30 days (planes-last-seen.json)
     a.first_pos = f.pos;
     // flight path for the tail-number panel: a point every ~20 s or ~0.2 mi, whichever comes first
     if (a.lat != null && (a.seen_pos ?? 0) < 60) {
@@ -491,10 +508,12 @@ async function refreshAircraft() {
       if (!last || now - last[3] > 20000 || Math.abs(a.lat - last[0]) + Math.abs(a.lon - last[1]) > 0.003) {
         h.push([+a.lat.toFixed(5), +a.lon.toFixed(5), a.alt_baro ?? null, now]);
         if (h.length > 4000) h.shift();
+        posLog.push([a.hex, h[h.length - 1][0], h[h.length - 1][1], a.alt_baro ?? null, now, (a.flight || '').trim() || a.r || '']);
       }
     }
   }
   for (const [hex, f] of firstSeen) if (now - f.last > 10 * 60000) { firstSeen.delete(hex); trackHist.delete(hex); }
+  while (posLog.length && now - posLog[0][4] > POS_LOG_MS) posLog.shift();
   latest = { at: now, body: JSON.stringify(j) };
   logAircraft(j.aircraft || [], now);
 }
@@ -680,7 +699,20 @@ try {
   if (saved.today?.day === localDay()) log = saved.today;
   else if (saved.today) history.push(dayTotals(saved.today));
 } catch (e) {}
-const saveLog = () => { try { fs.writeFileSync(LOG_FILE, JSON.stringify({ today: log, history })); } catch (e) {} };
+// All-time bests and the first day each aircraft type was seen (records.json next to the app).
+const RECORDS_FILE = path.join(APP_DIR, 'records.json');
+let records = { since: localDay(), best: {}, types: {} }, recordsDirty = false;
+try { records = { ...records, ...JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')) }; } catch (e) {}
+function record(key, value, lower, p, hex, now) {
+  const b = records.best[key];
+  if (b && (lower ? value >= b.v : value <= b.v)) return;
+  records.best[key] = { v: value, label: p.f || p.r || hex.toUpperCase(), desc: p.d || p.t || '', day: localDay(now) };
+  recordsDirty = true;
+}
+const saveLog = () => {
+  try { fs.writeFileSync(LOG_FILE, JSON.stringify({ today: log, history })); } catch (e) {}
+  if (recordsDirty) { recordsDirty = false; try { fs.writeFileSync(RECORDS_FILE, JSON.stringify(records)); } catch (e) {} }
+};
 setInterval(saveLog, 60000);
 
 // Per aircraft we keep only its personal bests, so leaderboards don't repeat the same plane.
@@ -694,6 +726,7 @@ function logAircraft(list, now) {
     p.last = now; p.hours |= 1 << hour;
     if (a.flight && a.flight.trim()) p.f = a.flight.trim();
     if (a.r) p.r = a.r; if (a.t) p.t = a.t; if (a.desc) p.d = a.desc; if (a.ownOp) p.o = a.ownOp;
+    if (a.t && !records.types[a.t]) { records.types[a.t] = log.day; if (records.since !== log.day) p.nt = 1; recordsDirty = true; } // (not on the very first day, when every type is new) // first time this type was ever seen here
     if (a.dbFlags & 3) p.m = a.dbFlags & 3; // 1 = military, 2 = interesting (privacy flags ignored)
     const alt = typeof a.alt_baro === 'number' ? a.alt_baro : null;
     if (a.gs != null && a.gs < 800 && (p.gs ?? 0) < a.gs) p.gs = Math.round(a.gs); // cap filters glitches
@@ -703,7 +736,11 @@ function logAircraft(list, now) {
       if (p.cd == null || d < p.cd) { p.cd = +d.toFixed(2); p.cda = a.alt_baro ?? null; p.cdt = now; }
       // "lowest pass" only counts flights within 2 mi of home, so nearby airport landings don't dominate
       if (alt != null && alt > 0 && d <= 2 && (p.la == null || alt < p.la)) { p.la = alt; p.lat_ = now; }
+      record('closest', p.cd, true, p, a.hex, now);
+      if (p.la != null) record('lowest', p.la, true, p, a.hex, now);
     }
+    if (p.gs != null) record('fastest', p.gs, false, p, a.hex, now);
+    if (p.alt != null) record('highest', p.alt, false, p, a.hex, now);
   }
 }
 
@@ -729,6 +766,8 @@ function logSummary() {
     types: countBy(p => p.d || p.t),
     special: P.filter(p => p.m).sort((a, b) => b.first - a.first).slice(0, 12).map(p => ({ ...base(p), first: p.first, cd: p.cd })),
     history: history.slice(-7),
+    records: { since: records.since, best: records.best, typesEver: Object.keys(records.types).length,
+      newTypes: P.filter(p => p.nt).map(p => ({ ...base(p), first: p.first })).slice(-12).reverse() },
   };
 }
 
@@ -1218,6 +1257,23 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, JSON.stringify({ current: VERSION, exe: !!sea, autoUpdate: autoUpdate(), repo: REPO, ...updateState }));
     }
     if (url.pathname === '/api/log') return send(res, 200, JSON.stringify(logSummary()));
+    if (url.pathname === '/api/log.csv') { // today's log as a spreadsheet file (Today's log > CSV)
+      const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"', t = ms => ms ? new Date(ms).toLocaleTimeString() : '';
+      const rows = Object.entries(log.planes).sort((x, y) => x[1].first - y[1].first).map(([hex, p]) =>
+        [hex.toUpperCase(), p.f, p.r, p.t, p.d, p.o, t(p.first), t(p.last), p.cd, p.cda, p.gs, p.alt, p.la, p.m & 1 ? 'yes' : '', p.nt ? 'yes' : ''].map(q).join(','));
+      res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="PorchRadar-log-${log.day}.csv"` });
+      return res.end('\ufeffHex,Flight,Registration,Type code,Type,Owner,First seen,Last seen,Closest (mi),Altitude at closest (ft),Top speed (kt),Top altitude (ft),Lowest within 2 mi (ft),Military,First of its type\r\n' + rows.join('\r\n'));
+    }
+    if (url.pathname === '/api/trails') { // where every plane has been in the last N minutes (map trails and replay)
+      const since = Date.now() - Math.min(180, Math.max(1, +url.searchParams.get('mins') || 60)) * 60e3, planes = {};
+      for (const [hex, lat, lon, alt, t, label] of posLog) {
+        if (t < since) continue;
+        const p = planes[hex] || (planes[hex] = { f: label, p: [] });
+        if (label) p.f = label;
+        p.p.push([lat, lon, alt, t]);
+      }
+      return send(res, 200, JSON.stringify({ now: Date.now(), planes }));
+    }
     const rg = url.pathname.match(/^\/api\/registry\/([A-Z0-9-]{2,10})$/i);
     if (rg) return send(res, 200, JSON.stringify(registry(rg[1].toUpperCase().replace(/-/g, ''))));
     if (url.pathname === '/api/home' && req.method === 'POST') {

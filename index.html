@@ -96,7 +96,7 @@
   /* list | map | panels; each column scrolls on its own */
   main { display: grid; grid-template-columns: 380px minmax(0, 1fr) 380px; grid-template-rows: minmax(560px, calc(calc(100vh / var(--ui)) - 140px)); grid-template-areas: "list map aside"; gap: 12px; padding: 0 20px 20px; min-height: 0; }
   #map { grid-area: map; border-radius: 14px; border: 1px solid var(--line); min-height: 420px; background: var(--map-bg); }
-  aside { grid-area: aside; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "stats" "today" "atc" "ships" "detail"; align-content: start; gap: 12px; min-height: 0; overflow-y: auto; }
+  aside { grid-area: aside; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "stats" "today" "atc" "aptnow" "ships" "detail"; align-content: start; gap: 12px; min-height: 0; overflow-y: auto; }
   @media (max-width: 1250px) {
     main { grid-template-columns: 360px minmax(0, 1fr); grid-template-rows: minmax(520px, calc(calc(100vh / var(--ui)) - 140px)) auto; grid-template-areas: "list map" "aside aside"; }
     aside { overflow: visible; }
@@ -104,6 +104,7 @@
   #stats { grid-area: stats; }
   #today { grid-area: today; }
   #atc { grid-area: atc; }
+  #aptNow { grid-area: aptnow; }
   #ships { grid-area: ships; }
   #detail { grid-area: detail; }
   /* left column: the aircraft list, with favorites under it */
@@ -124,8 +125,8 @@
     body.hide-left main, body.hide-left.hide-right main { grid-template-columns: 30px minmax(0, 1fr); }
   }
   body.hide-left #leftToggle, body.hide-right #rightToggle { position: static; width: 30px; height: 100%; min-height: 120px; border-radius: 10px; writing-mode: vertical-rl; font-size: 12px; }
-  #stats, #today, #atc, #ships, #favs { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
-  #stats[open], #today[open], #atc[open], #ships[open] { padding-bottom: 14px; }
+  #stats, #today, #atc, #aptNow, #ships, #favs { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  #stats[open], #today[open], #atc[open], #aptNow[open], #ships[open] { padding-bottom: 14px; }
   .st-h { display: flex; align-items: center; gap: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); cursor: pointer; list-style: none; user-select: none; }
   .st-h::-webkit-details-marker { display: none; }
   .st-h:hover { color: var(--text); }
@@ -174,6 +175,27 @@
   .fa-h { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--muted); }
   .fa-h a { margin-left: auto; color: var(--accent); text-decoration: none; }
   .fa-note { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  /* Airport now panel, the replay bar on the map and the log's tools */
+  #aptNow select { width: 100%; margin-top: 10px; }
+  #aptNow h6 { margin: 12px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  #aptNow .apt-tbl { width: 100%; font-size: 12px; }
+  #aptNow .apt-tbl th { text-align: left; font-weight: 500; color: var(--muted); padding: 2px 8px 2px 0; white-space: nowrap; vertical-align: top; }
+  #aptNow .apt-raw { display: block; margin-top: 6px; font: 11px var(--mono); white-space: pre-wrap; color: var(--muted); }
+  .an-big { margin: 10px 0 6px; }
+  .an-big b { display: block; font-size: 22px; }
+  .an-big small { color: var(--muted); font-size: 11px; }
+  .an-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .an-chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--text); text-decoration: none; }
+  .an-chip:hover { border-color: var(--accent); }
+  .an-chip small { color: var(--muted); }
+  .replay-ctl { display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 10px; padding: 4px 6px; color: var(--text); font-size: 12px; }
+  .replay-ctl button { font-size: 12px; padding: 3px 8px; }
+  .replay-ctl #rpBar { display: inline-flex; align-items: center; gap: 8px; }
+  .replay-ctl #rpBar[hidden] { display: none; }
+  .replay-ctl input { width: 200px; }
+  .td-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; font-size: 12px; }
+  .td-tools button { font-size: 12px; padding: 4px 10px; }
+  .td-tools a { color: var(--accent); text-decoration: none; }
   #faDays { display: block; width: 100%; height: 40px; margin-top: 4px; }
   .meter { height: 4px; border-radius: 2px; background: var(--line); margin-top: 5px; overflow: hidden; }
   .meter i { display: block; height: 100%; border-radius: 2px; }
@@ -657,7 +679,7 @@
     .left-col, aside { position: absolute; top: 12px; width: 340px; z-index: 1001; }
     .left-col { left: 12px; bottom: 12px; }
     aside { right: 12px; max-height: calc(100% - 24px); overflow-y: auto; scrollbar-width: thin; }
-    #list, #stats, #today, #atc, #ships, #favs, #detail { background: color-mix(in srgb, var(--panel) 84%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    #list, #stats, #today, #atc, #aptNow, #ships, #favs, #detail { background: color-mix(in srgb, var(--panel) 84%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
     /* a hidden column shrinks to its small show-again button */
     body.hide-left .left-col, body.hide-right aside { width: auto; bottom: auto; overflow: visible; }
     body.hide-left #leftToggle, body.hide-right #rightToggle { width: 32px; height: auto; min-height: 0; padding: 10px 0; background: color-mix(in srgb, var(--panel) 84%, transparent); }
@@ -696,6 +718,7 @@
       <label class="chk" title="Shade the part of the map where it's night right now"><input type="checkbox" id="nightOn" data-pref="Day/Night" data-pref-group="Map options"> 🌙 Day/Night</label>
       <label class="chk" title="Live rain radar on the map (US, refreshes every 5 minutes)"><input type="checkbox" id="wxOn" data-pref="Weather radar" data-pref-group="Map options"> 🌧 Show Weather</label>
       <label class="chk" title="A radar beam sweeping round your Tracker Radius"><input type="checkbox" id="sweepOn" data-pref="Radar sweep" data-pref-group="Map options"> 📡 Radar sweep</label>
+      <label class="chk" title="Faint lines showing where every plane flew in the last hour: the arrival and departure paths show up"><input type="checkbox" id="trailsOn" data-pref="Trails" data-pref-group="Map options"> 〰 Trails (last hour)</label>
       <label class="chk" title="Cruise ships and other boats, live (needs a free AISStream.io key in Settings)"><input type="checkbox" id="shipsOn" data-pref="Ships" data-pref-group="Map options"> 🚢 Show Ships</label>
       <h5>Look</h5>
       <label class="chk" title="How the map looks"><span>🌍 Map</span>
@@ -725,6 +748,7 @@
   <div class="stat" data-go="log" tabindex="0" role="button" title="Open today's log"><div class="k">🔥 Busiest hour</div><div class="v" id="tdBusy">–</div><div class="s" id="tdBusySub">&nbsp;</div></div>
   <div class="stat" data-go="types" tabindex="0" role="button" title="See the most-seen aircraft types today"><div class="k">🏆 Top type today</div><div class="v small" id="tdTopType">–</div><div class="s" id="tdTopTypeSub">&nbsp;</div></div>
   <div class="stat" data-go="fastest" tabindex="0" role="button" title="See the fastest planes seen today"><div class="k">🚀 Fastest today</div><div class="v" id="tdFastest">–</div><div class="s" id="tdFastestSub">&nbsp;</div></div>
+  <div class="stat" title="Golden hour: the hour after sunrise and the hour before sunset, the best light for photographing planes"><div class="k">🌅 Golden hour</div><div class="v small" id="sGold">–</div><div class="s" id="sGoldSub">&nbsp;</div></div>
 </section>
 
 <div class="banner" id="banner"></div>
@@ -752,15 +776,21 @@
       <svg id="tdHours" viewBox="0 0 240 50" preserveAspectRatio="none"></svg>
       <div class="td-axis"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>12a</span></div>
       <div class="tabs" id="tdTabs">
-        <button data-tab="closest" class="on">Closest</button><button data-tab="lowest">Lowest</button><button data-tab="fastest">Fastest</button><button data-tab="highest">Highest</button><button data-tab="airlines">Airlines</button><button data-tab="types">Types</button><button data-tab="special">Special</button>
+        <button data-tab="closest" class="on">Closest</button><button data-tab="lowest">Lowest</button><button data-tab="fastest">Fastest</button><button data-tab="highest">Highest</button><button data-tab="airlines">Airlines</button><button data-tab="types">Types</button><button data-tab="special">Special</button><button data-tab="records" title="Your all-time bests, and aircraft types seen here for the first time today">Records</button>
       </div>
       <div id="tdList"></div>
+      <div class="td-tools"><button type="button" id="tdCard" title="Save today as a picture you can share">📸 Summary card</button><a href="/api/log.csv" download title="Download today's log as a spreadsheet file">⬇ Spreadsheet (CSV)</a></div>
     </details>
     <details id="atc" open>
       <summary class="st-h"><span class="chev">▸</span>🎧 Listen to ATC<span class="st-sum" id="atcSum"></span></summary>
       <div class="atc-row"><select id="atcSel" aria-label="Airport to listen to"></select><a id="atcGo" class="atc-btn" href="#" target="_blank" rel="noopener">🎧 Listen</a></div>
       <div class="atc-quick" id="atcQuick"></div>
       <div class="fa-note">Opens the airport's live tower, approach and ground feeds on LiveATC.net in a new tab.</div>
+    </details>
+    <details id="aptNow" open>
+      <summary class="st-h"><span class="chev">▸</span>🛬 Airport now<span class="st-sum" id="aptNowSum"></span></summary>
+      <select id="aptNowSel" aria-label="Airport to show"></select>
+      <div id="aptNowBody"></div>
     </details>
     <details id="ships" open>
       <summary class="st-h"><span class="chev">▸</span>🚢 Cruise ships<span class="st-sum" id="shipsSum"></span></summary>
@@ -826,6 +856,11 @@
         <h4>⭕ Overhead distance</h4>
         <p class="hint">How close a plane has to pass to set off the overhead alerts: the full-screen close-up and the voice. It's the red dashed circle around home on the map, and changes as you drag.</p>
         <div class="row" style="align-items:center"><input type="range" id="alertMiIn" data-pref="Overhead distance" data-pref-group="Alerts and sound" data-pref-unit=" mi" min="0.25" max="5" step="0.25" aria-label="Overhead distance in miles"><b id="alertMiVal" style="min-width:64px;text-align:right;font-family:var(--mono)"></b></div>
+      </div>
+      <div class="place">
+        <h4>👀 Watch list</h4>
+        <p class="hint">Get a pop-up and a spoken heads-up when a plane you care about is anywhere in range. Type words separated by commas: an aircraft type or code (747, B52, blimp), an owner or airline (Coast Guard, NASA), a flight or tail number, or the words <b>military</b> or <b>helicopter</b>.</p>
+        <textarea id="watchIn" rows="2" spellcheck="false" style="width:100%;resize:vertical" placeholder="military, 747, Coast Guard, N1932K" aria-label="Watch list"></textarea>
       </div>
       <div class="place">
         <h4>🚨 Emergency bar distance</h4>
@@ -1703,6 +1738,7 @@ function renderAtcPicker() {
   const update = () => { $('atcGo').href = atcUrl($('atcSel').value); save('skyAtcPick', $('atcSel').value); $('atcSum').textContent = '· ' + $('atcSel').selectedOptions[0]?.textContent.split(' · ')[0]; };
   $('atcSel').onchange = update;
   update();
+  fillAptNow(); showGolden();
 }
 const atcUrl = code => 'https://www.liveatc.net/search/?icao=' + encodeURIComponent(code);
 // ICAO code for a route label like "Tampa (TPA)": use our airport list when it knows the field
@@ -1854,7 +1890,7 @@ function normalize(raw) {
     squawk: raw.squawk, reg: raw.r || '', type: raw.t || '', desc: raw.desc || '', owner: raw.ownOp || '',
     seenPos: raw.seen_pos ?? raw.seen ?? 0,
     emergency: raw.emergency && raw.emergency !== 'none' ? raw.emergency : null,
-    firstSeen: raw.first_seen ?? null,
+    firstSeen: raw.first_seen ?? null, isNew: !!raw.nw,
     firstPos: raw.first_pos ?? null,
     flags: (raw.dbFlags || 0) & 3, // 1 = military, 2 = interesting; privacy flags (4, 8) deliberately ignored
     year: raw.year || null,
@@ -1877,6 +1913,7 @@ function notifySpecial(a) {
   el.onclick = () => { select(a.hex, true); el.remove(); };
   $('toasts').appendChild(el);
   setTimeout(() => el.remove(), 12000);
+  if (sp === 'emergency') speak(`Emergency aircraft in range. ${emergencyOf(a).toLowerCase()}.`);
 }
 
 // ---------- photo / info / route lookups ----------
@@ -2034,6 +2071,7 @@ function update(list) {
 
     const visible = a.inside || showAll || !!specialOf(a);
     notifySpecial(a);
+    notifyWatch(a);
     notifyFavorite(a);
     if (visible) {
       if (!t.marker) {
@@ -2115,6 +2153,7 @@ function render() {
       const sp = specialOf(a);
       const badge = '<span class="badges">'
         + (sp ? `<span class="badge sp" style="--bc:${SPECIAL[sp].color}">${sp === 'emergency' ? emergencyOf(a) : SPECIAL[sp].label}</span>` : '')
+        + (a.isNew ? `<span class="badge sp" style="--bc:#3ad29f" title="Not seen here in the last 30 days">NEW</span>` : '')
         + (isFav(a.hex, reg) ? '<span class="badge fav">⭐ FAVORITE</span>' : '')
         + (a.dist != null && a.dist < 1 ? '<span class="badge">OVERHEAD</span>' : a.dist != null && a.dist < 2 ? '<span class="badge near">NEAR</span>' : '')
         + '</span>';
@@ -2698,6 +2737,8 @@ async function openReg(hex, reg) {
     isUS ? `<a href="https://registry.faa.gov/AircraftInquiry/Search/NNumberResult?nNumberTxt=${reg.slice(1)}" target="_blank" rel="noopener">FAA Registry ↗</a>` : '',
     `<a href="https://www.flightaware.com/resources/registration/${reg}" target="_blank" rel="noopener">FlightAware ↗</a>`,
     `<a href="https://www.planespotters.net/search?q=${reg}" target="_blank" rel="noopener">Planespotters ↗</a>`,
+    `<a href="https://www.jetphotos.com/registration/${encodeURIComponent(reg)}" target="_blank" rel="noopener" title="Photos of this exact plane on JetPhotos">Photos ↗</a>`,
+    `<a href="https://www.flightaware.com/live/flight/${encodeURIComponent(reg)}/history" target="_blank" rel="noopener" title="This plane's recent flights on FlightAware">Flight history ↗</a>`,
     `<a href="https://www.flightradar24.com/data/aircraft/${encodeURIComponent(reg.toLowerCase())}" target="_blank" rel="noopener" title="Opens this plane's page on Flightradar24: its route, schedule and recent flights">Flightradar24 ↗</a>`,
     hex ? adsbxBtn(hex, reg, '🌐 ADS-B Exchange') : '',
     hex ? favBtn(hex, reg, true) : '',
@@ -3130,6 +3171,7 @@ function renderLog() {
     case 'highest': html = L.highest.map((p, i) => row(i, p, p.value.toLocaleString() + ' ft')).join(''); break;
     case 'airlines': html = L.airlines.map((a, i) => countRow(i, `<b>${AIRLINES[a.key] || a.key}</b> <small>${a.key}</small>`, a.count, L.airlines[0].count)).join(''); break;
     case 'types': html = L.types.map((t, i) => countRow(i, nice(t.key), t.count, L.types[0].count)).join(''); break;
+    case 'records': html = recordsHtml(L.records); break;
     case 'special': html = L.special.map((p, i) => row(i, p, p.mil & 1 ? '<span style="color:#9be15d">MILITARY</span>' : '<span style="color:#c58cff">INTERESTING</span>', `first seen ${timeOf(p.first)}${p.cd != null ? ' · ' + p.cd.toFixed(1) + ' mi' : ''}`)).join(''); break;
   }
   $('tdList').innerHTML = html || `<div class="lb-empty">Nothing yet today${logTab === 'lowest' ? ' within 2 miles of home' : ''}.</div>`;
@@ -4181,6 +4223,240 @@ function demoTick() {
   }
   return demoPlanes;
 }
+
+// ---------- a short spoken line with the chosen voice (watch list and emergencies) ----------
+function speak(text) {
+  if (!soundOn) return;
+  chime();
+  if (kokoroVoice() && !failedVoices.has(voiceName)) sayKokoro(text, kokoroVoice()); else say(text);
+}
+function toast(html, color, hex) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.style.setProperty('--bc', color);
+  el.innerHTML = html;
+  el.onclick = () => { if (hex) select(hex, true); el.remove(); };
+  $('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 12000);
+}
+
+// ---------- watch list (Settings > Alerts): words to look out for, in any plane's flight, tail, type, model or owner ----------
+// "military" and "helicopter" match those kinds of aircraft. A match anywhere in range gets a pop-up and a spoken
+// line, once an hour per aircraft.
+var watchText = load('skyWatch', ''), watched = new Map();
+function watchOf(a) {
+  const terms = watchText.toLowerCase().split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  if (!terms.length) return null;
+  const hay = [a.flight, a.reg, a.type, a.desc, ownerOf(a), airlineOf(a)].filter(Boolean).join(' | ').toLowerCase();
+  return terms.find(t => t === 'military' ? a.flags & 1 : t === 'helicopter' ? isHeli(a) : hay.includes(t)) || null;
+}
+function notifyWatch(a) {
+  if (a.lat == null || !watchText) return;
+  const term = watchOf(a);
+  if (!term || Date.now() - (watched.get(a.hex) || 0) < 60 * 60000) return;
+  watched.set(a.hex, Date.now());
+  if (firstLoad) return; // don't spam on page load
+  const what = modelOf(a) || a.type || 'aircraft', where = a.dist != null ? `${distTxt(a.dist)} ${compass(a.brg)}` : '';
+  toast(`<b>👀 On your watch list</b> (${esc(term)})<br>${esc(a.flight || a.reg || a.hex.toUpperCase())} · ${esc(what)}${where ? ' · ' + where : ''}`, '#f7b32b', a.hex);
+  speak(`Watch list. ${what}${a.dist != null ? `, ${distTxt(a.dist)} to the ${COMPASS_WORDS[compass(a.brg)]}` : ''}.`);
+}
+$('watchIn').value = watchText;
+$('watchIn').oninput = e => { watchText = e.target.value; save('skyWatch', watchText); };
+
+// ---------- golden hour: the hour after sunrise and the hour before sunset, the best light for photos ----------
+function showGolden() {
+  if (!home) return;
+  const H = 3600e3, now = Date.now();
+  let s = sunTimes(home[0], home[1]);
+  if (!s.rise) { $('sGold').textContent = '–'; $('sGoldSub').textContent = s.allDay ? 'sun is up all day' : 'no sun today'; return; }
+  const tonight = now > s.set.getTime();
+  if (tonight) s = sunTimes(home[0], home[1], new Date(now + 24 * H)); // after sunset: show tomorrow morning's
+  const am = now < s.rise.getTime() + H;
+  const from = am ? s.rise : new Date(s.set.getTime() - H), to = am ? new Date(s.rise.getTime() + H) : s.set;
+  $('sGold').textContent = `${clockTxt(from)} – ${clockTxt(to)}`;
+  $('sGoldSub').textContent = now >= from && now <= to ? 'happening now' : tonight ? 'tomorrow morning' : am ? 'after sunrise' : 'before sunset';
+}
+setInterval(showGolden, 5 * 60000);
+
+// ---------- Airport now: wind, the runway in use, crosswind per runway, density altitude, pattern traffic and the forecast ----------
+var aptNowInfo = null;
+function fillAptNow() {
+  if (!home || !airportList.length) return;
+  const list = airportList.filter(p => /airport/.test(p.type) && /^[A-Z0-9]{3,4}$/.test(p.ident))
+    .map(p => ({ ...p, d: distMi(home, [p.lat, p.lon]) })).sort((a, b) => a.d - b.d).slice(0, 25);
+  const saved = load('skyAptNow', '');
+  $('aptNowSel').innerHTML = list.map(p => `<option value="${p.ident}"${p.ident === saved ? ' selected' : ''}>${p.iata || p.ident} · ${esc(nice(p.name))} · ${distTxt(p.d)}</option>`).join('');
+  loadAptNow();
+}
+async function loadAptNow() {
+  const id = $('aptNowSel').value;
+  if (!id) return;
+  save('skyAptNow', id);
+  try { aptNowInfo = await fetch('/api/airportinfo?ident=' + encodeURIComponent(id)).then(r => r.json()); } catch (e) { return; }
+  renderAptNow();
+}
+function renderAptNow() {
+  const d = aptNowInfo;
+  if (!d || d.ident !== $('aptNowSel').value) return;
+  const w = d.weather, code = d.iata || d.ident, row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : '';
+  let h = '', sum = code;
+  if (!w) h += '<div class="fa-note">No weather report near this airport right now.</div>';
+  else {
+    const use = runwayInUse(d.runways || [], w), hasDir = typeof w.wdir === 'number';
+    const wind = w.wspd === 0 ? 'Calm' : w.wspd == null ? '' : `${hasDir ? String(w.wdir).padStart(3, '0') + '°' : 'Variable'} at ${w.wspd} kt${w.wgst ? ', gusting ' + w.wgst + ' kt' : ''}`;
+    if (use) { h += `<div class="an-big"><b>${use.calm ? 'Any runway' : 'Runway ' + esc(use.end)}</b><small>${use.calm ? 'wind is calm' : 'in use, worked out from the wind'}</small></div>`; sum += use.calm ? ' · calm' : ' · runway ' + use.end; }
+    // density altitude: how high the air "feels" to a wing and engine (pressure altitude corrected for temperature)
+    let da = '';
+    if (d.elev != null && w.altimHpa && w.tempC != null) {
+      const pa = d.elev + (1013.25 - w.altimHpa) * 27, isa = 15 - 1.98 * pa / 1000;
+      da = `${(Math.round((pa + 118.8 * (w.tempC - isa)) / 100) * 100).toLocaleString()} ft <small>field is ${d.elev.toLocaleString()} ft</small>`;
+    }
+    const cat = FLIGHT_CAT[w.cat];
+    h += `<table class="apt-tbl">${row('Wind', wind)}${row('Conditions', cat ? `<b style="color:${cat[1]}">${esc(w.cat)}</b> ${cat[0]}` : '')}${row('Density altitude', da)}</table>`;
+    // head/tailwind and crosswind on every runway end
+    if (hasDir && w.wspd >= 3) {
+      const ends = [];
+      for (const r of d.runways || []) {
+        if (r.closed || !r.name.includes('/')) continue;
+        const [e1, e2] = r.name.split('/'), h1 = typeof r.heading === 'number' ? r.heading : (parseInt(e1, 10) || 0) * 10;
+        for (const [end, hdg] of [[e1, h1], [e2, (h1 + 180) % 360]]) {
+          const diff = ((w.wdir - hdg + 540) % 360) - 180, head = Math.round(w.wspd * Math.cos(diff * SUN_RAD)), cross = Math.round(Math.abs(w.wspd * Math.sin(diff * SUN_RAD)));
+          ends.push([head, `<tr><th>${esc(end)}</th><td>${head >= 0 ? head + ' kt headwind' : -head + ' kt tailwind'} · ${cross ? cross + ' kt crosswind from the ' + (diff > 0 ? 'right' : 'left') : 'no crosswind'}</td></tr>`]);
+        }
+      }
+      if (ends.length) h += `<h6>Wind on each runway</h6><table class="apt-tbl">${ends.sort((a, b) => b[0] - a[0]).map(e => e[1]).join('')}</table>`;
+    }
+  }
+  // the traffic pattern: planes below 3,000 ft above the field and within 5 nautical miles
+  const top = (d.elev || 0) + 3000, pat = current.filter(p => p.lat != null && typeof p.alt === 'number' && p.alt < top && distMi([d.lat, d.lon], [p.lat, p.lon]) <= 5.75);
+  h += `<h6>In the pattern <small>${pat.length}</small></h6>`
+    + (pat.length ? `<div class="an-chips">${pat.map(p => `<a href="#" class="an-chip" data-hex="${p.hex}">${esc(p.flight || p.reg || p.hex.toUpperCase())} <small>${p.alt.toLocaleString()} ft</small></a>`).join('')}</div>`
+      : '<div class="fa-note">Nobody below 3,000 ft within 5 nautical miles right now.</div>');
+  if (w?.raw) h += `<h6>Report and forecast</h6><code class="apt-raw" title="The raw weather report (METAR)">${esc(w.raw)}</code>`
+    + (d.taf ? `<code class="apt-raw" title="The raw forecast (TAF)">${esc(d.taf)}</code>` : '<div class="fa-note">No forecast (TAF) is published for this field.</div>');
+  $('aptNowBody').innerHTML = h + '<div class="fa-note">For fun, not for flight planning.</div>';
+  $('aptNowSum').textContent = '· ' + sum;
+}
+$('aptNowSel').onchange = loadAptNow;
+$('aptNowBody').addEventListener('click', e => { const c = e.target.closest('.an-chip'); if (c) { e.preventDefault(); select(c.dataset.hex, true); } });
+setInterval(renderAptNow, 10000);
+setInterval(loadAptNow, 5 * 60000);
+
+// ---------- trails: where every plane flew in the last hour, as faint lines (〰 Trails in Map Options) ----------
+map.createPane('trails').style.zIndex = 390; // under the airports and planes
+var trailsOn = load('skyTrails', false);
+const hourTrails = L.layerGroup().addTo(map), trailCanvas = L.canvas({ pane: 'trails' });
+async function drawTrails() {
+  if (!trailsOn) return hourTrails.clearLayers();
+  let j;
+  try { j = await fetch('/api/trails?mins=60').then(r => r.json()); } catch (e) { return; }
+  hourTrails.clearLayers();
+  for (const p of Object.values(j.planes)) {
+    let seg = [], alts = [];
+    const flush = () => {
+      if (seg.length > 1) L.polyline(seg, { renderer: trailCanvas, color: altColor(alts[alts.length >> 1] ?? null), weight: 1.5, opacity: .45, interactive: false }).addTo(hourTrails);
+      seg = []; alts = [];
+    };
+    p.p.forEach((q, i) => {
+      if (i && q[3] - p.p[i - 1][3] > 120000) flush(); // out of touch for over 2 minutes: start a new line
+      seg.push([q[0], q[1]]);
+      if (typeof q[2] === 'number') alts.push(q[2]);
+    });
+    flush();
+  }
+}
+$('trailsOn').checked = trailsOn;
+$('trailsOn').addEventListener('change', e => { trailsOn = e.target.checked; save('skyTrails', trailsOn); countLayers(); drawTrails(); });
+setInterval(drawTrails, 60000);
+drawTrails();
+
+// ---------- replay: scrub back through the last 3 hours of traffic (⏪ Replay on the map) ----------
+var replay = null; // { now, planes } while the replay bar is open
+const replayLayer = L.layerGroup();
+const replayCtl = L.control({ position: 'bottomright' });
+replayCtl.onAdd = () => {
+  const el = L.DomUtil.create('div', 'replay-ctl');
+  el.innerHTML = '<button type="button" id="rpBtn" title="Scrub back through the last 3 hours of traffic">⏪ Replay</button>'
+    + '<span id="rpBar" hidden><input type="range" id="rpIn" min="-180" max="0" step="1" value="-10" aria-label="Minutes ago"><b id="rpTime"></b><button type="button" id="rpClose">✕ Live</button></span>';
+  L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el);
+  return el;
+};
+replayCtl.addTo(map);
+function drawReplay() {
+  if (!replay) return;
+  const t = replay.now + $('rpIn').value * 60000;
+  $('rpTime').textContent = clockTxt(new Date(t));
+  replayLayer.clearLayers();
+  for (const [hex, p] of Object.entries(replay.planes)) {
+    const pts = p.p, i = pts.findIndex(q => q[3] >= t), last = pts[pts.length - 1];
+    if (i < 0 && t - last[3] > 60000) continue; // it had already gone by then
+    const b = i < 0 ? last : pts[i], a = i < 0 ? null : pts[i - 1];
+    let pos = b;
+    if (!a) { if (b[3] - t > 30000) continue; }
+    else {
+      if (b[3] - a[3] > 120000) continue; // it was out of touch at that moment
+      const k = (t - a[3]) / (b[3] - a[3]);
+      pos = [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, b[2]];
+    }
+    L.circleMarker([pos[0], pos[1]], { radius: 5, weight: 1, color: '#0b1020', fillColor: altColor(pos[2]), fillOpacity: 1 })
+      .bindTooltip(`${esc(p.f || hex.toUpperCase())}${typeof pos[2] === 'number' ? ' · ' + pos[2].toLocaleString() + ' ft' : ''}`, { direction: 'top' }).addTo(replayLayer);
+  }
+}
+$('rpBtn').onclick = async () => {
+  try { replay = await fetch('/api/trails?mins=180').then(r => r.json()); } catch (e) { return; }
+  $('rpBtn').hidden = true; $('rpBar').hidden = false;
+  map.removeLayer(planeLayer); replayLayer.addTo(map);
+  drawReplay();
+};
+$('rpIn').oninput = drawReplay;
+$('rpClose').onclick = () => {
+  replay = null;
+  $('rpBar').hidden = true; $('rpBtn').hidden = false;
+  map.removeLayer(replayLayer); planeLayer.addTo(map);
+};
+
+// ---------- Today's log: all-time records, and the day as a picture ----------
+function recordsHtml(R) {
+  if (!R) return '';
+  const B = R.best, row = (k, label, val) => B[k] ? `<div class="lb"><span class="rk">★</span><div class="nm"><b>${label}</b> <small>${esc(B[k].label)}${B[k].desc ? ' · ' + esc(nice(B[k].desc)) : ''}</small></div><div class="val">${val(B[k].v)}<small>${esc(B[k].day)}</small></div></div>` : '';
+  return row('fastest', 'Fastest ever', v => speedTxt(v)) + row('highest', 'Highest ever', v => v.toLocaleString() + ' ft')
+    + row('closest', 'Closest ever', v => distTxt(v, 2)) + row('lowest', 'Lowest pass ever', v => v.toLocaleString() + ' ft')
+    + R.newTypes.map(p => `<div class="lb ${tracks.has(p.hex) ? 'live' : ''}" data-hex="${p.hex}"><span class="rk">🆕</span><div class="nm"><b>${esc(p.desc ? nice(p.desc) : p.type)}</b> <small>first time here · ${esc(p.flight || p.reg || p.hex.toUpperCase())}</small></div><div class="val">${timeOf(p.first)}</div></div>`).join('')
+    + `<div class="lb-empty">${R.typesEver.toLocaleString()} different aircraft types seen since ${esc(R.since)}.</div>`;
+}
+function summaryCard() {
+  const D = logData;
+  if (!D) return;
+  const c = document.createElement('canvas'), g = c.getContext('2d'), css = getComputedStyle(document.documentElement);
+  const v = n => css.getPropertyValue(n).trim() || '#888', font = (w, px) => { g.font = `${w} ${px}px Inter, system-ui, sans-serif`; };
+  c.width = c.height = 1080;
+  g.fillStyle = v('--bg'); g.fillRect(0, 0, 1080, 1080);
+  g.fillStyle = v('--panel'); g.fillRect(50, 50, 980, 980);
+  g.fillStyle = v('--accent'); font(700, 54); g.fillText('Today on my porch', 100, 150);
+  g.fillStyle = v('--muted'); font(500, 30); g.fillText(new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }), 100, 200);
+  g.fillStyle = v('--text'); font(800, 170); g.fillText(D.unique.toLocaleString(), 100, 400);
+  g.fillStyle = v('--muted'); font(500, 34); g.fillText('aircraft flew by', 100, 450);
+  const who = p => p ? (p.flight || p.reg || p.hex.toUpperCase()) + (p.desc ? ' · ' + nice(p.desc) : '') : '', peak = D.hourly.indexOf(Math.max(...D.hourly));
+  const rows = [
+    ['Busiest hour', D.hourly[peak] ? `${hourName(peak)} · ${D.hourly[peak]} aircraft` : ''],
+    ['Fastest', D.fastest[0] ? `${speedTxt(D.fastest[0].value)} · ${who(D.fastest[0])}` : ''],
+    ['Highest', D.highest[0] ? `${D.highest[0].value.toLocaleString()} ft · ${who(D.highest[0])}` : ''],
+    ['Closest', D.closest[0] ? `${distTxt(D.closest[0].value, 2)} · ${who(D.closest[0])}` : ''],
+    ['Top type', D.types[0] ? `${nice(D.types[0].key)} · ${D.types[0].count} seen` : ''],
+    ['Top airline', D.airlines[0] ? `${AIRLINES[D.airlines[0].key] || D.airlines[0].key} · ${D.airlines[0].count} flights` : ''],
+    ['Military', D.military ? String(D.military) : ''],
+  ].filter(r => r[1]);
+  rows.forEach(([k, val], i) => {
+    const y = 540 + i * 62;
+    g.fillStyle = v('--muted'); font(500, 30); g.fillText(k, 100, y);
+    g.fillStyle = v('--text'); font(600, 30);
+    let s = val; while (g.measureText(s).width > 640 && s.length > 8) s = s.slice(0, -2); // keep long names on the card
+    g.fillText(s === val ? s : s + '…', 340, y);
+  });
+  g.fillStyle = v('--accent'); font(600, 28); g.fillText("KrabbzDev's Porch Radar", 100, 990);
+  const a = document.createElement('a');
+  a.download = `PorchRadar-${D.day}.png`; a.href = c.toDataURL('image/png'); a.click();
+}
+$('tdCard').onclick = summaryCard;
 
 init();
 </script>
