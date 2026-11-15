@@ -712,7 +712,7 @@
     <summary title="Choose what the map shows">🗺 Map Options <span class="lm-count" id="layersCount"></span></summary>
     <div class="layers-pop">
       <h5>Show on the map</h5>
-      <label class="chk"><input type="checkbox" id="showAll" data-pref="Show outside radius" data-pref-group="Map options"> Show outside radius</label>
+      <label class="chk"><input type="checkbox" id="showAll" data-pref="Show outside radius" data-pref-group="Map options"> Show planes outside the circle</label>
       <label class="chk"><input type="checkbox" id="showApts" data-pref="Airports" data-pref-group="Map options" checked> Show Airports</label>
       <label class="chk" title="A dot at each airport's weather station, coloured by flying conditions: green good, blue marginal, red poor, purple very poor"><input type="checkbox" id="metarOn" data-pref="Airport weather" data-pref-group="Map options"> ⛅ Airport Weather</label>
       <label class="chk" title="The FAA's temporary flight restrictions (VIP visits, stadiums, fires...) as red areas"><input type="checkbox" id="tfrOn" data-pref="TFRs" data-pref-group="Map options"> ⛔ TFRs</label>
@@ -3760,7 +3760,7 @@ function renderShipPanel() {
   if (!shipData.keySet) {
     $('shipsSum').textContent = 'not set up';
     body.innerHTML = `<p class="fa-note" style="margin-top:10px">See cruise ships and other boats near you, live. It's free: you just need an AISStream.io key.</p>
-      <button class="atc-btn" id="shipSetup" style="margin-top:8px">🚢 Set up ship tracking</button>`;
+      <button class="atc-btn" id="shipSetup" style="margin-top:8px" title="Open Settings, Ships, to paste your free AISStream key and turn on live ships">🚢 Set up ship tracking</button>`;
     $('shipSetup').onclick = () => openHome(false).then(() => { showTab('ships'); $('aisIn').focus(); });
     return;
   }
@@ -3894,7 +3894,7 @@ function explorePopup(a) {
 const jumpBox = L.control({ position: 'topright' });
 jumpBox.onAdd = () => {
   const el = L.DomUtil.create('div', 'jump-box');
-  el.innerHTML = `<form autocomplete="off"><input id="jumpIn" type="search" placeholder="🔎 Jump to a place, airport, ship or tail number" aria-label="Jump to a place, airport, ship or plane on the map"></form><div class="jump-results" id="jumpResults"></div>`;
+  el.innerHTML = `<form autocomplete="off"><input id="jumpIn" type="search" title="Type a place, airport, ship name or tail number and press Enter to find it on the map" placeholder="🔎 Jump to a place, airport, ship or tail number" aria-label="Jump to a place, airport, ship or plane on the map"></form><div class="jump-results" id="jumpResults"></div>`;
   L.DomEvent.disableClickPropagation(el);
   L.DomEvent.disableScrollPropagation(el);
   return el;
@@ -4214,7 +4214,7 @@ legend.onAdd = () => {
       ${ship({ type: 55 }, 'Law enforcement')}
       ${ship({}, 'Other or not reported yet')}
     </div>
-    <button type="button" class="lg-btn" aria-expanded="false"></button></div>`;
+    <button type="button" class="lg-btn" aria-expanded="false" title="Show or hide what the plane, circle, airport and ship symbols mean"></button></div>`;
   const btn = el.querySelector('.lg-btn'), panel = el.querySelector('.lg-panel');
   const set = open => {
     panel.hidden = !open; btn.setAttribute('aria-expanded', open); save('skyLegend', open);
@@ -4427,7 +4427,7 @@ const replayCtl = L.control({ position: 'bottomright' });
 replayCtl.onAdd = () => {
   const el = L.DomUtil.create('div', 'replay-ctl');
   el.innerHTML = '<button type="button" id="rpBtn" title="Scrub back through the last 3 hours of traffic">⏪ Replay</button>'
-    + '<span id="rpBar" hidden><input type="range" id="rpIn" min="-180" max="0" step="1" value="-10" aria-label="Minutes ago"><b id="rpTime"></b><button type="button" id="rpClose">✕ Live</button></span>';
+    + '<span id="rpBar" hidden><input type="range" id="rpIn" min="-180" max="0" step="1" value="-10" aria-label="Minutes ago" title="Drag to move back in time, up to 3 hours. The dots are where each plane was then."><b id="rpTime"></b><button type="button" id="rpClose" title="Leave replay and go back to the live map">✕ Live</button></span>';
   L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el);
   return el;
 };
@@ -4508,6 +4508,115 @@ function summaryCard() {
   a.download = `PorchRadar-${D.day}.png`; a.href = c.toDataURL('image/png'); a.click();
 }
 $('tdCard').onclick = summaryCard;
+
+// ---------- tooltips: every option explains itself when you hover it ----------
+// One list, so the wording is easy to find and fix. Controls that already carry their own title keep it.
+const TIPS = {
+  // top bar
+  '#radius': 'How far from home to track planes, up to 50 nm. Planes inside this circle are listed, labelled and logged, and the blue circle on the map shows it.',
+  '#showAll': 'Also draw planes that are outside your Tracker Radius circle. They appear on the map but are not in the list, the log or the alerts.',
+  '#showApts': 'Show airports and heliports on the map as small squares. Click one for its runways, radio frequencies and weather.',
+  '#mapStyleSel': 'How the map looks: Dark, Light, Streets, Topographic or Satellite.',
+  '#chartSel': 'Lay an FAA aeronautical chart under the planes (VFR sectional, terminal area, or IFR low or high enroute). US only, and not for navigation.',
+  '#homeBtn': 'Open Settings: your home, alerts and voice, display, ships, flights, feeder stats, network, updates and more.',
+  // favorites, log, ATC, airport panels
+  '#favIn': 'Type a tail number, like N1932K, to add that plane to your favorites.',
+  '#favForm button': 'Add this tail number to Favorite planes. The app then watches for it and remembers where it was last seen.',
+  '#tdTabs [data-tab="closest"]': 'The planes that passed closest to home today.',
+  '#tdTabs [data-tab="lowest"]': 'The lowest planes within 2 miles of home today.',
+  '#tdTabs [data-tab="fastest"]': 'The fastest planes seen today.',
+  '#tdTabs [data-tab="highest"]': 'The highest planes seen today.',
+  '#tdTabs [data-tab="airlines"]': 'Which airlines you saw the most today.',
+  '#tdTabs [data-tab="types"]': 'Which aircraft types you saw the most today.',
+  '#tdTabs [data-tab="special"]': 'Military and other interesting aircraft seen today.',
+  '#tdTabs [data-tab="records"]': 'Your all-time bests, and aircraft types seen here for the first time today.',
+  '#atcSel': 'The airport whose live air traffic control radio you want to open on LiveATC. The 25 closest to home are listed.',
+  '#aptNowSel': 'The airport to show the runway in use, wind and forecast for. The 25 closest to home are listed.',
+  // settings dialog
+  '#setX': 'Close Settings without saving your changes.',
+  '.set-tabs [data-tab="loc"]': 'Where home is, and an optional second place.',
+  '.set-tabs [data-tab="alerts"]': 'The overhead alert distance, watch list, emergency bar and the announcement voice and words.',
+  '.set-tabs [data-tab="display"]': 'Size, theme, map lines, units and other looks.',
+  '.set-tabs [data-tab="ships"]': 'Live ships and cruise ships: your free AISStream key and which cruise lines to show.',
+  '.set-tabs [data-tab="flights"]': 'Optional FlightAware key, for the real route and times of each flight.',
+  '.set-tabs [data-tab="feeder"]': 'Your FlightAware feeder stats, and an optional contact for the data sites.',
+  '.set-tabs [data-tab="network"]': 'Let phones, tablets and TVs on your Wi-Fi open the dashboard.',
+  '.set-tabs [data-tab="updates"]': 'Check for and install new versions of the app.',
+  '.set-tabs [data-tab="news"]': "What's new in the latest versions.",
+  '.set-tabs [data-tab="help"]': 'Send feedback, or send or save a debug log if something is wrong.',
+  '.set-tabs [data-tab="credits"]': 'The free data and tools this app is built on.',
+  '.set-tabs [data-tab="reset"]': 'Put every setting back to how a fresh install starts.',
+  '#homeAddr': 'Type an address, ZIP code or place name, then press Search. A full address is more accurate than a ZIP code.',
+  '[data-find="home"]': 'Look up the address or ZIP code and set it as your home.',
+  '#homeNameIn': 'The name shown on the home pin on the map, like "Our Home".',
+  '#geoBtn': "Use this device's location as home. Your browser asks permission first.",
+  '[data-pick="home"]': 'Close Settings and click your home on the map.',
+  '#latIn': 'Home latitude in decimal degrees, for example 27.9506. Filled in for you when you search.',
+  '#lonIn': 'Home longitude in decimal degrees, for example -82.4572 (west is negative). Filled in for you when you search.',
+  '#offAddr': 'Type an address, ZIP code or place name for a second place, like work, then press Search.',
+  '[data-find="office"]': 'Look up the address or ZIP code and set it as your second place.',
+  '#offName': 'The name shown on the second pin on the map, like "Work".',
+  '[data-pick="office"]': 'Close Settings and click the second place on the map.',
+  '#offLat': 'Latitude of the second place in decimal degrees. Filled in for you when you search.',
+  '#offLon': 'Longitude of the second place in decimal degrees (west is negative). Filled in for you when you search.',
+  '#clearOffice': 'Remove the second place and its pin from the map.',
+  '#alertMiIn': 'How close a plane has to pass to set off the full-screen close-up and the voice. It is the red dashed circle on the map and changes as you drag.',
+  '#watchIn': 'Words to watch for, separated by commas: an aircraft type, an owner or airline, a flight or tail number, or military or helicopter. A match gets a pop-up and a spoken heads-up.',
+  '#emergNmIn': 'The red bar at the top shows planes with an emergency (squawk 7500, 7600 or 7700, or an emergency status) within this distance of home.',
+  '#voicePick': "Who speaks the announcements. Kokoro voices sound the most natural and download once; your browser's own voices are instant.",
+  '#voiceUpbeat': 'A little higher and faster, TikTok style. Works with Kokoro and the browser voices.',
+  '#sayIn': 'The sentence spoken for each plane overhead. Words in {braces}, like {airline} or {altitude}, are filled in for each plane; any the app does not know are left out.',
+  '#voiceTest': 'Say the sentence now with the chosen voice, using an example plane.',
+  '#sayReset': 'Put the spoken sentence back to the standard one.',
+  '#uiScale': 'Make everything on the page bigger or smaller. Changes right away.',
+  '#themeSel': 'The colors of the dashboard: Midnight, Daylight, Radar or Dusk. Changes right away.',
+  '#sweepStrIn': 'How strong the turning radar beam looks when Radar sweep is on in Map Options. Lower is fainter.',
+  '#trailStrIn': 'How strong the Flight history lines and the Plane tails look. Lower is fainter.',
+  '#trailMinsIn': 'How far back the Flight history lines go. The app remembers up to 3 hours, and starts counting again when it restarts.',
+  '#nauticalIn': 'Speeds in knots and distances in nautical miles, as pilots use, instead of mph and miles. Altitudes are always in feet.',
+  '#aisIn': 'Your free AISStream.io key for live ship positions. It is stored only on this PC and never sent to the page.',
+  '#linesAll': 'Show every cruise line.',
+  '#linesNone': 'Hide every cruise line, then tick the ones you want.',
+  '#aeroIn': 'Your FlightAware AeroAPI key (not a FlightAware website login). It fills in the real route and times on the plane card. It is stored only on this PC.',
+  '#faIn': 'Your FlightAware username, if you feed ADS-B data to FlightAware, to show your feeder stats.',
+  '#contactIn': 'An email or web page, sent to the photo and plane-data sites as a courtesy so they can reach you if needed. Optional.',
+  '#lanIn': "Let phones, tablets and TVs on your home Wi-Fi open the dashboard at this PC's address. Only turn it on at home.",
+  '#autoUpd': 'Install new versions on their own and restart the app. Off means you choose when, with Check for updates.',
+  '#updCheck': 'Ask GitHub if a newer version is available.',
+  '#updInstall': 'Download the newer version and restart the app on it.',
+  '#newsBtn': "Show the notes of the latest versions: what's new.",
+  '#fbOpen': 'Tell the developer about a bug or an idea. Your address is never included.',
+  '#debugEmail': 'Open a new email with the app log attached, to send to whoever is helping you.',
+  '#resetAsk': 'Start putting every setting back to default. You are asked to confirm first.',
+  '#resetAll': 'Also forget your home, accounts, keys, cruise lines and favorites, like a brand-new install.',
+  '#resetGo': 'Reset the settings now.',
+  '#resetCancel': 'Keep my settings and go back.',
+  '#cancelHome': 'Close Settings without saving your changes.',
+  '#saveHome': 'Save the changes in Settings and close it.',
+  '#soundLock': 'Browsers keep a page silent until you click it. One click anywhere turns on the chime and the voice.',
+  // feedback, share and the other dialogs
+  '#fbClose': 'Close without sending.',
+  '.fb-tabs [data-kind="bug"]': 'Something is broken or wrong.',
+  '.fb-tabs [data-kind="idea"]': 'A feature you would like.',
+  '#fbText': 'Describe what you clicked and what happened, or what you would like.',
+  '#fbCopy': 'Copy this message to the clipboard instead of sending it.',
+  '#fbSend': 'Send this message to the developer on GitHub.',
+  '#axShare': 'Share a link to this plane.',
+  '#axClose': 'Close the ADS-B Exchange view.',
+  '#regX': 'Close this panel.',
+  '#regClose': 'Close this panel.',
+  '#toClose': 'Close the close-up.',
+};
+function applyTips() {
+  for (const [sel, text] of Object.entries(TIPS)) {
+    for (const el of document.querySelectorAll(sel)) {
+      if (!el.title) el.title = text;
+      const label = el.closest('label'); // hovering the words of a checkbox shows it too
+      if (label && !label.title) label.title = text;
+    }
+  }
+}
+applyTips();
 
 init();
 </script>
