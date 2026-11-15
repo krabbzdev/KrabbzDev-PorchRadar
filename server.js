@@ -658,6 +658,19 @@ async function addFavorite(text) {
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
   favNext = Math.max(0, settings.favorites.findIndex(f => f.hex === hex)); // check the new one first
 }
+// Planes everyone starts with in Favorite planes. Each is added once per install (remembered in settings.json), so
+// removing one sticks; if the lookup fails (offline) it is tried again at the next start.
+const DEFAULT_FAVORITES = ['N29UB', 'N247WE', 'N628TS'];
+async function addDefaultFavorites() {
+  const done = settings.defaultFavs || [];
+  for (const reg of DEFAULT_FAVORITES) {
+    if (done.includes(reg)) continue;
+    try { await addFavorite(reg); } catch (e) { console.log(`Default favorite ${reg} not added: ${e.message}`); continue; }
+    settings.defaultFavs = [...(settings.defaultFavs || []), reg];
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
+    console.log(`Default favorite added: ${reg}`);
+  }
+}
 function removeFavorite(hex) {
   settings.favorites = (settings.favorites || []).filter(f => f.hex !== hex);
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
@@ -1935,6 +1948,7 @@ function startedUp() {
     settings.port = PORT;
     try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1)); } catch (e) {}
   }
+  setTimeout(addDefaultFavorites, 6000);
   aisConnect();
   console.log(`KrabbzDev's Porch Radar v${VERSION.version} build ${VERSION.build} running at http://localhost:${PORT}${settings.lanAccess ? ' and ' + lanUrls().join(', ') : ''}`);
   if (sea) { console.log('To stop it, right-click the plane icon in the system tray and choose Quit.'); openBrowser(); startTray(); }
