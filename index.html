@@ -4349,8 +4349,8 @@ setInterval(loadAptNow, 5 * 60000);
 // ---------- trails: where every plane flew in the last hour, as faint lines (〰 Trails in Map Options) ----------
 map.createPane('trails').style.zIndex = 390; // under the airports and planes
 var trailsOn = load('skyTrails', false);
-// 0.05 to 1 (default 0.5): how strong trails look. The last-hour lines use 90% of it, the live line behind each plane 110%.
-var trailStr = load('skyTrailStr', 0.5);
+// 0.05 to 1 (default 0.25): how strong trails look. The last-hour lines use 90% of it, the live line behind each plane 110%.
+var trailStr = load('skyTrailStr', 0.25);
 const showTrailStr = () => { $('trailStrIn').value = trailStr; $('trailStrVal').textContent = Math.round(trailStr * 100) + '%'; };
 showTrailStr();
 $('trailStrIn').addEventListener('input', e => {
