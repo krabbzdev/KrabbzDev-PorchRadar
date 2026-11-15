@@ -641,6 +641,37 @@
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px 16px; }
     header, main { padding-left: 16px; padding-right: 16px; }
   }
+  /* Full map (computers and tablets; phones keep the stacked layout above): the map fills everything under the top
+     bar, the stats are one slim strip, and the plane list and the side panels float over the map as glass panels. */
+  @media (min-width: 961px) {
+    body { height: calc(100vh / var(--ui)); overflow: hidden; }
+    header { padding: 8px 14px; gap: 12px; position: relative; z-index: 5; }
+    .stats { display: flex; gap: 6px; padding: 6px 14px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); }
+    .stat { flex: 1 0 auto; display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 5px 12px; border-radius: 999px; }
+    .stat:hover, .stat:focus-visible { transform: none; }
+    .stat .k { font-size: 10px; }
+    .stat .v, .stat .v.small { font-size: 15px; margin: 0; padding: 0; }
+    .stat .s { display: none; }
+    main, body.hide-left main, body.hide-right main, body.hide-left.hide-right main { display: block; position: relative; z-index: 0; padding: 0; min-height: 0; }
+    #map { position: absolute; inset: 0; border: 0; border-radius: 0; min-height: 0; }
+    .left-col, aside { position: absolute; top: 12px; width: 340px; z-index: 1001; }
+    .left-col { left: 12px; bottom: 12px; }
+    aside { right: 12px; max-height: calc(100% - 24px); overflow-y: auto; scrollbar-width: thin; }
+    #list, #stats, #today, #atc, #ships, #favs, #detail { background: color-mix(in srgb, var(--panel) 84%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    /* a hidden column shrinks to its small show-again button */
+    body.hide-left .left-col, body.hide-right aside { width: auto; bottom: auto; overflow: visible; }
+    body.hide-left #leftToggle, body.hide-right #rightToggle { width: 32px; height: auto; min-height: 0; padding: 10px 0; background: color-mix(in srgb, var(--panel) 84%, transparent); }
+    /* the map's own buttons, search box and legend sit beside the panels, not under them */
+    #map > .leaflet-control-container .leaflet-left { left: 352px; }
+    #map > .leaflet-control-container .leaflet-right { right: 352px; }
+    body.hide-left #map > .leaflet-control-container .leaflet-left { left: 44px; }
+    body.hide-right #map > .leaflet-control-container .leaflet-right { right: 44px; }
+  }
+  @media (min-width: 961px) and (max-width: 1250px) {
+    .left-col, aside { width: 290px; }
+    #map > .leaflet-control-container .leaflet-left { left: 302px; }
+    #map > .leaflet-control-container .leaflet-right { right: 302px; }
+  }
 </style>
 </head>
 <body>
