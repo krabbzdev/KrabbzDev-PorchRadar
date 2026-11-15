@@ -2094,7 +2094,8 @@ function update(list) {
         t.marker = L.marker([a.lat, a.lon], { icon: planeIcon(a, a.inside) }).addTo(planeLayer);
         t.marker.on('click', () => select(a.hex));
         // hover card; fetch the photo/route as soon as someone hovers
-        t.marker.bindTooltip(() => planeTip(tracks.get(a.hex).aircraft), { className: 'plane-tip', direction: 'top', offset: [0, -14], opacity: 1 });
+        t.marker.bindTooltip(() => { const tr = tracks.get(a.hex); return tr ? planeTip(tr.aircraft) : ''; }, // the plane may have just dropped off the map while its card was opening
+           { className: 'plane-tip', direction: 'top', offset: [0, -14], opacity: 1 });
         t.marker.on('tooltipopen', e => {
           requestLookup(a.hex);
           // open above planes in the lower half of the map and below ones in the upper half, so the card isn't cut off
