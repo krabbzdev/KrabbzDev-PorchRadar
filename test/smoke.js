@@ -61,6 +61,9 @@ function browser() {
     const r = await fetch(BASE + '/api/speaker', { method: 'POST', headers, body: '{"id":"smoke","vis":false}' });
     if (r.status !== 403) bad('a request from another website was answered ' + r.status + ' (wanted 403): ' + JSON.stringify(headers));
   }
+  // ...nor pose as the app by pointing its own name at this PC
+  const posed = await new Promise(done => http.get(BASE + '/api/settings', { headers: { Host: 'other.example:8097' } }, r => { r.resume(); done(r.statusCode); }).on('error', () => done(0)));
+  if (posed !== 403) bad('a request under another website\'s name was answered ' + posed + ' (wanted 403)');
   if (!fails.length) ok(routes.length + ' addresses answer, and other websites are refused');
 
   // 3. the page, in a real browser

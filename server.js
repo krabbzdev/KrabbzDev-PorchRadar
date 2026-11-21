@@ -1135,6 +1135,11 @@ const server = http.createServer(async (req, res) => {
     // Another website open in the browser must not be able to drive the app. A browser names the page that sent a
     // request in Origin (on anything but a plain GET) and marks it cross-site in Sec-Fetch-Site; the app's own page
     // has the same host as the request, and the tray helper sends neither.
+    // A website can point a name it owns at this PC and so pose as the app's own page. Answer only under the app's
+    // real names: localhost, a plain number address (a website's name can never be one), or this PC's name.
+    const host = (req.headers.host || '').replace(/:\d+$/, '').toLowerCase(), pc = require('os').hostname().toLowerCase();
+    if (host && !/^(localhost|[\d.]+|\[[0-9a-f:.]+\])$/.test(host) && host !== pc && host !== pc + '.local')
+      return send(res, 403, '{"error":"Open the app at http://localhost or by this PC\'s address"}');
     const origin = req.headers.origin, isApi = url.pathname.startsWith('/api/');
     if ((req.method !== 'GET' && origin && origin.replace(/^https?:\/\//, '') !== req.headers.host) || (isApi && req.headers['sec-fetch-site'] === 'cross-site'))
       return send(res, 403, '{"error":"Requests from other websites are not allowed"}');
