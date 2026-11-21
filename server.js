@@ -1132,6 +1132,12 @@ const server = http.createServer(async (req, res) => {
     // the debug log and the tray's controls stay with this PC.
     if (!isLocalReq(req) && (req.method !== 'GET' || /^\/api\/(debuglog|update)/.test(url.pathname)))
       return send(res, 403, '{"error":"Only the PC running the app can change this"}');
+    // Another website open in the browser must not be able to drive the app. A browser names the page that sent a
+    // request in Origin (on anything but a plain GET) and marks it cross-site in Sec-Fetch-Site; the app's own page
+    // has the same host as the request, and the tray helper sends neither.
+    const origin = req.headers.origin, isApi = url.pathname.startsWith('/api/');
+    if ((req.method !== 'GET' && origin && origin.replace(/^https?:\/\//, '') !== req.headers.host) || (isApi && req.headers['sec-fetch-site'] === 'cross-site'))
+      return send(res, 403, '{"error":"Requests from other websites are not allowed"}');
     if (url.pathname === '/' || url.pathname === '/index.html') {
       return send(res, 200, indexHtml(), 'text/html; charset=utf-8');
     }

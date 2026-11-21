@@ -56,7 +56,12 @@ function browser() {
       else if (p.startsWith('/api/') && p !== '/api/log.csv') JSON.parse(r.body);
     } catch (e) { bad(`${method} ${p}: ${e.message}`); }
   }
-  if (!fails.length) ok(routes.length + ' addresses answer');
+  // another website must not be able to change the app
+  for (const headers of [{ Origin: 'http://other.example' }, { 'Sec-Fetch-Site': 'cross-site' }]) {
+    const r = await fetch(BASE + '/api/speaker', { method: 'POST', headers, body: '{"id":"smoke","vis":false}' });
+    if (r.status !== 403) bad('a request from another website was answered ' + r.status + ' (wanted 403): ' + JSON.stringify(headers));
+  }
+  if (!fails.length) ok(routes.length + ' addresses answer, and other websites are refused');
 
   // 3. the page, in a real browser
   const exe = browser();

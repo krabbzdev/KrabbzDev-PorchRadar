@@ -1227,6 +1227,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const DEMO = new URLSearchParams(location.search).has('demo');
+// Text from outside feeds must never become HTML. Every answer from the app passes through here before the page
+// uses it: < > " and ` are swapped for look-alikes and script-style links are dropped, so no value can open a tag,
+// close an attribute or run as a link. esc() at each spot stays as a second layer.
+const cleanText = s => /^\s*(javascript|data|vbscript):/i.test(s) ? '' : s.replace(/[<>"`]/g, c => ({ '<': '‹', '>': '›', '"': '”', '`': 'ʼ' }[c]));
+const cleanData = v => typeof v === 'string' ? cleanText(v) : Array.isArray(v) ? v.map(cleanData)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [cleanText(k), cleanData(x)])) : v;
+{ // only the app's own answers: the voice library reads its own files with the same call and needs them untouched
+  const json = Response.prototype.json;
+  Response.prototype.json = function () { const mine = this.url.startsWith(location.origin + '/api/'); return json.call(this).then(v => mine ? cleanData(v) : v); };
+}
+console.assert(JSON.stringify(cleanData({ a: ['<img onerror="x">', 5], u: ' JavaScript:alert(1)' })) === '{"a":["‹img onerror=”x”›",5],"u":""}', 'cleanData');
 // ?selftest: used by test/smoke.js before each release. Any error while loading, a map with no size, an empty list
 // or a control without a tooltip is written to <body data-selftest>, where the test reads it ("ok" when all is well).
 if (new URLSearchParams(location.search).has('selftest')) {
@@ -1289,7 +1300,7 @@ document.documentElement.dataset.theme = THEMES.includes(load('skyTheme', 'radar
 $('themeSel').value = document.documentElement.dataset.theme;
 $('themeSel').addEventListener('change', e => setTheme(e.target.value, true));
 let home = null; // comes from the app's settings (see init)
-let radius = load('skyRadius', 21); // 21 miles = 18 nautical miles
+let radius = +load('skyRadius', 21) || 21; // 21 miles = 18 nautical miles
 let showAll = load('skyShowAll', true);
 // UI scale (Settings > Display): CSS zoom on the whole page, remembered per browser
 let uiScale = load('skyUiScale', 1);
