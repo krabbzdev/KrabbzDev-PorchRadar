@@ -681,7 +681,7 @@ async function addFavorite(text) {
 }
 // Planes everyone starts with in Favorite planes. Each is added once per install (remembered in settings.json), so
 // removing one sticks; if the lookup fails (offline) it is tried again at the next start.
-const DEFAULT_FAVORITES = ['N29UB', 'N247WE', 'N628TS'];
+const DEFAULT_FAVORITES = ['N29UB', 'N247WE', 'N628TS', 'N711MG'];
 async function addDefaultFavorites() {
   const done = settings.defaultFavs || [];
   for (const reg of DEFAULT_FAVORITES) {
