@@ -4471,6 +4471,12 @@ function showFoundPlane(r, move) {
   const p = r.plane, i = r.info || {}, reg = r.reg || p.reg || p.hex.toUpperCase(), live = r.status === 'live';
   const wasOpen = planeFindLayer.getLayers()[0]?.isPopupOpen();
   planeFindLayer.clearLayers();
+  // already on the map from the home feed: don't draw a second copy of it, just select that one
+  const t = live && tracks.get(p.hex);
+  if (t && t.marker && planeLayer.hasLayer(t.marker) && Date.now() - t.updated < 30000) {
+    if (move) { map.setView([t.aircraft.lat, t.aircraft.lon], Math.max(map.getZoom(), 10)); select(p.hex); }
+    return;
+  }
   const when = new Date(p.seen).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const row = (k, v) => v ? `<span>${k}</span><span>${esc(v)}</span>` : '';
   const html = `<div class="pt">${i.photo ? `<img class="pt-photo" src="${esc(i.photo)}" alt="" onerror="this.remove()">` : ''}
