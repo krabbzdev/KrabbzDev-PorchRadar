@@ -198,7 +198,11 @@ async function stockPhoto(model, mfr = '', type = '') {
   return out;
 }
 
+// Military serials like "6064" have no letters and are reused by other countries, so a photo search by that number can
+// return another air force's plane. For those, search by the plane's own transponder code (hex) instead.
+const photoReg = reg => /[A-Za-z]/.test(reg || '') ? reg : '';
 async function lookup(hex, cs, reg, mfr = '', model = '', type = '') {
+  reg = photoReg(reg) || ''; // used only to find photos; the reg shown on the card comes from the feed
   const key = [hex, cs, reg, mfr, model, type].join('|');
   if (lookupCache.has(key)) return lookupCache.get(key);
   const out = { photo: null, info: null, flight: null };
@@ -1357,7 +1361,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/photos') { // more photos of one plane (the overhead close-up's photo strip)
       const hex = (url.searchParams.get('hex') || '').toLowerCase(), reg = (url.searchParams.get('reg') || '').toUpperCase();
       if (!/^[0-9a-f]{6}$/.test(hex) || !/^[A-Z0-9-]{0,10}$/.test(reg)) return send(res, 400, '[]');
-      return send(res, 200, JSON.stringify(await morePhotos(reg, hex)));
+      return send(res, 200, JSON.stringify(await morePhotos(photoReg(reg), hex)));
     }
     if (url.pathname === '/api/log') return send(res, 200, JSON.stringify(logSummary()));
     if (url.pathname === '/api/log.csv') { // today's log as a spreadsheet file (Today's log > CSV)
