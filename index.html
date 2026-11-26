@@ -267,6 +267,14 @@
   @keyframes emergPulse { 50% { background: #8f0d2e; } }
   .banner { display: none; margin: 0 20px 12px; padding: 10px 14px; border-radius: 10px; background: rgba(255,93,115,.12); border: 1px solid rgba(255,93,115,.4); font-size: 13px; }
   .banner.show { display: block; }
+  /* a favorite plane is on screen: impossible to miss */
+  .fav-bar { display: none; margin: 0 20px 12px; padding: 12px 16px; border-radius: 10px; background: #ffd27a; color: #1a1200; font-weight: 700; font-size: 16px; cursor: pointer; animation: favPulse 1.4s ease-in-out infinite; }
+  .fav-bar.show { display: block; }
+  .fav-bar u { text-decoration: none; font-size: 1.15em; }
+  @keyframes favPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,210,122,.75); } 50% { box-shadow: 0 0 0 10px rgba(255,210,122,0); } }
+  @media (prefers-reduced-motion: reduce) { .fav-bar { animation: none; } }
+  .plane .halo.fav { inset: -11px; border-width: 3px; }
+  #wall .w-fav { display: inline-block; margin-top: 1vh; padding: .4vh 1.2vw; border-radius: 999px; background: #ffd27a; color: #1a1200; font-size: clamp(14px, 2vw, 34px); font-weight: 800; }
 
   /* Map bits */
   .leaflet-container { font-family: Inter, system-ui, sans-serif; }
@@ -916,6 +924,7 @@
   <div class="stat" title="Golden hour: the hour after sunrise and the hour before sunset, the best light for photographing planes"><div class="k">🌅 Golden hour</div><div class="v small" id="sGold">–</div><div class="s" id="sGoldSub">&nbsp;</div></div>
 </section>
 
+<div class="fav-bar" id="favBar" role="button" tabindex="0" title="One of your favorite planes is in range. Click to find it on the map."></div>
 <div class="banner" id="banner"></div>
 
 <main>
@@ -2099,13 +2108,13 @@ const SPECIAL = {
 };
 
 function planeIcon(a, inside) {
-  const sp = specialOf(a);
-  // special aircraft stay visible (and in colour) even outside the radius
-  const show = inside || sp;
+  const sp = specialOf(a), fav = isFav(a.hex, a.reg);
+  // special aircraft and your favorites stay visible (and in colour) even outside the radius
+  const show = inside || sp || fav;
   const color = show ? altColor(a.alt) : '#5b6684';
   const name = a.flight || a.reg;
-  const label = show && name ? `<span class="tag">${sp ? `<em style="color:${SPECIAL[sp].color}">${SPECIAL[sp].tag}</em> ` : ''}${name}</span>` : '';
-  const halo = sp ? `<span class="halo" style="--hc:${SPECIAL[sp].color}"></span>` : '';
+  const label = show && name ? `<span class="tag">${sp ? `<em style="color:${SPECIAL[sp].color}">${SPECIAL[sp].tag}</em> ` : fav ? '<em style="color:#ffd27a">★</em> ' : ''}${name}</span>` : '';
+  const halo = sp ? `<span class="halo" style="--hc:${SPECIAL[sp].color}"></span>` : fav ? '<span class="halo fav" style="--hc:#ffd27a"></span>' : '';
   const logo = show && logoUrl(a) ? `<img class="logo" src="${logoUrl(a)}" alt="" onerror="this.remove()">` : '';
   return L.divIcon({ className: show ? 'plane' : 'plane out', html: halo + logo + aircraftSvg(a, color, a.track || 0) + label, iconSize: [26, 26], iconAnchor: [13, 13] });
 }
@@ -2351,7 +2360,7 @@ function update(list) {
     if (t.points.length > 120) t.points.shift();
     t.aircraft = a; t.updated = now;
 
-    const visible = a.inside || showAll || !!specialOf(a);
+    const visible = a.inside || showAll || !!specialOf(a) || isFav(a.hex, a.reg);
     notifySpecial(a);
     notifyWatch(a);
     notifyFavorite(a);
@@ -2374,7 +2383,7 @@ function update(list) {
         if (!planeLayer.hasLayer(t.marker)) planeLayer.addLayer(t.marker);
         if (t.marker.isTooltipOpen()) t.marker.setTooltipContent(planeTip(a)); // keep an open card live
       }
-      t.marker.setZIndexOffset(specialOf(a) ? 700 : a.inside ? 500 : 0);
+      t.marker.setZIndexOffset(specialOf(a) || isFav(a.hex, a.reg) ? 700 : a.inside ? 500 : 0);
       if (tailsOn && a.inside && t.points.length > 1) {
         if (!t.trail) t.trail = L.polyline(t.points, { weight: 2, opacity: Math.min(1, trailStr * 1.1), interactive: false }).addTo(trailLayer);
         t.trail.setLatLngs(t.points).setStyle({ color: altColor(a.alt) });
@@ -2396,6 +2405,7 @@ function update(list) {
     }
   }
   current = rows;
+  updateFavBar();
   updateEmergencyBar();
   render();
 }
@@ -4491,6 +4501,14 @@ setInterval(loadFavs, 20000);
 
 // pop-up when a favorite flies into range of home (once per visit)
 var favNotified;
+function updateFavBar() {
+  const el = $('favBar'), hits = current.filter(a => a.lat != null && isFav(a.hex, a.reg));
+  el.classList.toggle('show', !!hits.length);
+  if (!hits.length) return;
+  el.dataset.hex = hits[0].hex;
+  el.innerHTML = '⭐ ' + hits.map(a => `<u>${esc(a.reg || a.flight || a.hex.toUpperCase())}</u>${a.desc ? ' · ' + esc(nice(a.desc)) : ''}${a.dist != null ? ` · ${esc(distTxt(a.dist))} ${compass(a.brg)}` : ''}`).join(' &nbsp; ⭐ ') + ' — your favorite is on screen';
+}
+$('favBar').addEventListener('click', e => { const h = e.currentTarget.dataset.hex; if (h) select(h, true); });
 function notifyFavorite(a) {
   if (!isFav(a.hex, a.reg)) return;
   favNotified = favNotified || new Map();
@@ -4502,6 +4520,7 @@ function notifyFavorite(a) {
   el.onclick = () => { select(a.hex, true); el.remove(); };
   $('toasts').appendChild(el);
   setTimeout(() => el.remove(), 15000);
+  speak(`Your favorite ${a.reg || a.flight || 'plane'} is in range.`);
 }
 
 // The plane finder: from the Jump to box ("N1932K") or a favorite. Live: a pulsing ring that follows it for a few
@@ -4561,9 +4580,9 @@ function showFoundPlane(r, move) {
 }
 
 // ---------- Flight Wall: a full-screen LED-board view of the planes in range, one at a time ----------
-// Planes inside the Tracker Radius, nearest first, each shown for 8 seconds (click for the next). Same data as the map.
+// Planes inside the Tracker Radius (plus any favorite in range), favorites first and then nearest, each shown for 8 seconds (click for the next). Same data as the map.
 let wallOn = false, wallIdx = 0, wallTimer = null, wallSince = 0;
-function wallPlanes() { return current.filter(a => a.inside).sort((a, b) => (a.dist ?? 99) - (b.dist ?? 99)); }
+function wallPlanes() { return current.filter(a => a.inside || isFav(a.hex, a.reg)).sort((a, b) => (isFav(b.hex, b.reg) - isFav(a.hex, a.reg)) || (a.dist ?? 99) - (b.dist ?? 99)); }
 // The path of the flight: a curve from the departure airport to the destination, solid where the plane has been, dotted
 // where it is going, with the plane where it really is along the way. Without a known route there is no line.
 function wallPath(a) {
@@ -4621,14 +4640,14 @@ function drawWall() {
     + `<span><em>HDG</em>${flapT(a.track != null ? String(Math.round(a.track) % 360).padStart(3, '0') + '°' : '—')}</span>`
     + `<span><em>DIST</em>${flapT(a.dist != null ? distTxt(a.dist) + ' ' + compass(a.brg) : '—')}</span>`;
   // everything that doesn't change second to second: rebuilt (and flipped) only when the plane or what we know about it changes
-  const sig = [a.hex, a.flight, rp.fromIcao, rp.toIcao, rp.from, rp.to, rp.guessed, logo, ph?.src, airlineOf(a), modelOf(a)].join('|');
+  const sig = [a.hex, a.flight, rp.fromIcao, rp.toIcao, rp.from, rp.to, rp.guessed, logo, ph?.src, airlineOf(a), modelOf(a), isFav(a.hex, a.reg)].join('|');
   const fresh = sig !== wallSig;
   if (fresh) {
     wallSig = sig;
     body.innerHTML = `<div class="w-main"><div class="w-left">
         <div class="w-top">
           <div class="w-logo${logo ? '' : ' txt'}${tag.length > 4 ? ' long' : ''}">${logo ? `<img src="${esc(logo)}" alt="" data-t="${esc(tag)}" onerror="const p=this.parentNode;p.classList.add('txt');p.textContent=this.dataset.t;p.innerHTML='<span>'+p.innerHTML+'</span>'">` : `<span>${esc(tag)}</span>`}</div>
-          <div><div class="w-flight">${flapT(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${flapT(airlineOf(a) || ownerOf(a) || '')}</div></div></div>
+          <div><div class="w-flight">${flapT(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${flapT(airlineOf(a) || ownerOf(a) || '')}</div>${isFav(a.hex, a.reg) ? '<div class="w-fav">★ Favorite plane</div>' : ''}</div></div>
         ${rp.fromIcao || rp.toIcao ? `<div class="w-route">${flapT(code(rp.fromIcao))}<span class="w-arrow">→</span>${flapT(code(rp.toIcao))}</div>
           <div class="w-cities">${flapT(short(rp.from) + ' → ' + short(rp.to) + (rp.guessed ? ' (likely)' : ''))}</div>` : ''}
         <div class="w-type">${flapT(modelOf(a) || a.type || '')}</div>
