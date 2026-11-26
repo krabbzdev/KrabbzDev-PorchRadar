@@ -4608,10 +4608,23 @@ function wallPath(a) {
 // Text as split-flap tiles: one dark tile per letter (words wrap together). flipIn() makes them flip into place.
 const flapT = text => `<span class="fw">${String(text).split(/\s+/).filter(Boolean).map(w => `<span class="fwd">${[...w].map(c => `<i class="fl" data-c="${esc(c)}">${esc(c)}</i>`).join('')}</span>`).join('')}</span>`;
 let wallSig = '', wallAnim = [];
+// The split-flap clatter: a burst of short clicks while the tiles flip. Follows the sound setting and quiet hours, and
+// (like all sound) stays silent until the page has been clicked once.
+function flapClicks(ms) {
+  if (!soundOn || isQuiet() || !audioCtx || audioCtx.state !== 'running') return;
+  const t0 = audioCtx.currentTime, len = Math.floor(audioCtx.sampleRate * .012), buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2; // a click that dies away fast
+  for (let t = 0; t < ms / 1000; t += .028 + Math.random() * .03) {
+    const src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
+    src.buffer = buf; f.type = 'bandpass'; f.frequency.value = 1800 + Math.random() * 1800; g.gain.value = (.18 + Math.random() * .2) * volume;
+    src.connect(f).connect(g).connect(audioCtx.destination); src.start(t0 + t);
+  }
+}
 function flipIn(root) {
   wallAnim.forEach(clearTimeout); wallAnim = [];
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const tiles = [...root.querySelectorAll('.fl')], gap = Math.min(28, 1100 / (tiles.length || 1)), CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  flapClicks(Math.min(1100, tiles.length * gap) + 360);
   tiles.forEach((t, i) => {
     const end = t.dataset.c, n = 3 + (i % 4);
     t.textContent = ' ';
