@@ -304,7 +304,7 @@
   /* Overhead takeover */
   /* Flight Wall: a full-screen LED-panel style board that cycles through the planes in range */
   #wall { position: fixed; inset: 0; z-index: 3500; background: #000; color: #ffb000; display: none; flex-direction: column; justify-content: center;
-    padding: 4vh 5vw; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; text-transform: uppercase; cursor: pointer; overflow: hidden; }
+    padding: 4vh 5vw 8vh; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; text-transform: uppercase; cursor: pointer; overflow: hidden; }
   #wall.show { display: flex; }
   #wall .w-top { display: flex; align-items: center; gap: 3vw; }
   #wall .w-logo { width: 14vw; height: 14vw; max-width: 220px; max-height: 220px; flex: none; border-radius: 14px; background: #fff; display: grid; place-items: center; overflow: hidden; }
@@ -318,7 +318,7 @@
   #wall .w-route .w-arrow { color: #ffb000; }
   #wall .w-cities { font-size: clamp(14px, 2.2vw, 38px); color: #8fd3ff; margin-top: .5vh; }
   #wall .w-type { font-size: clamp(16px, 2.8vw, 48px); color: #7dff9a; margin-top: 3vh; }
-  #wall .w-strip { display: flex; gap: 4vw; margin-top: 4vh; flex-wrap: wrap; }
+  #wall .w-strip { display: flex; justify-content: space-between; gap: 2vw; flex-wrap: wrap; }
   #wall .w-strip > span { display: flex; flex-direction: column; font-size: clamp(20px, 3.6vw, 62px); font-weight: 800; color: #fff; }
   #wall .w-strip em { font-style: normal; font-size: clamp(11px, 1.4vw, 24px); color: #ffb000; letter-spacing: .15em; }
   #wall .w-main { display: flex; gap: 3vw; align-items: flex-start; }
@@ -334,16 +334,18 @@
   #wall .fl::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #000; }
   #wall .fl.flap { animation: wallFlap .06s linear; }
   @keyframes wallFlap { 0% { transform: scaleY(1); } 50% { transform: scaleY(.15); } 100% { transform: scaleY(1); } }
-  #wall .w-bottom { display: flex; gap: 3vw; align-items: center; margin-top: 3vh; }
-  #wall .w-bottom .w-path { flex: 1; min-width: 0; margin-top: 0; }
-  #wall .w-mapslot { flex: 0 0 26vw; max-width: 26vw; }
-  #wall .w-map { height: clamp(110px, 24vh, 260px); border-radius: 12px; overflow: hidden; background: #0b0b0b; }
+  #wall .w-bottom { display: flex; gap: 3vw; align-items: center; }
+  #wall .w-bottom #wPath { flex: 1; min-width: 0; }
+  #wall .w-bottom .w-path { margin-top: 0; }
+  #wall .w-mapslot { flex: 0 0 30vw; max-width: 30vw; }
+  #wall .w-map { height: clamp(120px, 22vh, 260px); border-radius: 12px; overflow: hidden; background: #0b0b0b; }
   #wall .w-map .leaflet-control-attribution { font-size: 9px; background: #000a; color: #999; text-transform: none; }
   #wall .wall-plane { background: none; border: none; }
   @media (max-width: 800px) { #wall .w-bottom { flex-direction: column; align-items: stretch; } #wall .w-mapslot { flex: none; max-width: 100%; } }
   #wall .w-path { margin-top: 3vh; }
   #wall .w-path svg { width: 100%; height: clamp(70px, 15vh, 170px); display: block; }
-  #wall .w-idle { text-align: center; color: #ffb000; }
+  #wall #wallBody { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; }
+  #wall .w-idle { text-align: center; color: #ffb000; margin: auto 0; }
   #wall .w-idle b { display: block; font-size: clamp(50px, 16vw, 280px); text-shadow: 0 0 20px currentColor; }
   #wall .w-idle small { font-size: clamp(14px, 2.6vw, 44px); color: #8fd3ff; }
   #wall .w-foot { position: absolute; left: 5vw; right: 5vw; bottom: 2.5vh; z-index: 1; display: flex; justify-content: space-between; font-size: clamp(11px, 1.3vw, 22px); color: #ffb00099; }
@@ -4714,10 +4716,12 @@ function drawWall() {
   const tag = (a.flight || '').match(/^([A-Z]{3})\d/)?.[1] || (a.reg || a.flight || a.hex).toUpperCase(); // the text tile when there is no logo
   const vr = a.vr > 300 ? ' ↑' : a.vr < -300 ? ' ↓' : '';
   const short = x => (x || '').split(/[,(]/)[0].trim(), code = x => (x || '?').replace(/^K(?=[A-Z]{3}$)/, '');
+  const yrs = (y => y && new Date().getFullYear() - y >= 0 && new Date().getFullYear() - y <= 120 ? new Date().getFullYear() - y : null)(parseInt(a.year, 10));
   const strip = `<span><em>ALT</em>${flapT(fmtAlt(a.alt) + vr)}</span><span><em>SPEED</em>${flapT(speedTxt(a.gs) || '—')}</span>`
     + `<span><em>HDG</em>${flapT(a.track != null ? String(Math.round(a.track) % 360).padStart(3, '0') + '°' : '—')}</span>`
     + `<span><em>DIST</em>${flapT(a.dist != null ? distTxt(a.dist) + ' ' + compass(a.brg) : '—')}</span>`
-    + `<span><em>SEEN</em>${flapT(it.live || hm24(it.w.first) === hm24(it.w.last) ? hm24(it.w.first) : hm24(it.w.first) + '–' + hm24(it.w.last))}</span>`;
+    + `<span><em>SEEN</em>${flapT(it.live || hm24(it.w.first) === hm24(it.w.last) ? hm24(it.w.first) : hm24(it.w.first) + '–' + hm24(it.w.last))}</span>`
+    + (yrs != null ? `<span><em>AGE</em>${flapT(yrs === 0 ? 'NEW' : yrs + (yrs === 1 ? ' YR' : ' YRS'))}</span>` : ''); // how old the plane is, when the feed knows the year it was built
   const gone = it.live ? '' : `<div class="w-gone">${(m => m < 1 ? 'Just left' : 'Left ' + m + ' min ago')(Math.floor((Date.now() - it.w.last) / 60000))}</div>`;
   // everything that doesn't change second to second: rebuilt (and flipped) only when the plane or what we know about it changes
   const sig = [a.hex, a.flight, rp.fromIcao, rp.toIcao, rp.from, rp.to, rp.guessed, logo, ph?.src, airlineOf(a), modelOf(a), isHot(a)].join('|');
@@ -4731,8 +4735,9 @@ function drawWall() {
         ${rp.fromIcao || rp.toIcao ? `<div class="w-route">${flapT(code(rp.fromIcao))}<span class="w-arrow">→</span>${flapT(code(rp.toIcao))}</div>
           <div class="w-cities">${flapT(short(rp.from) + ' → ' + short(rp.to) + (rp.guessed ? ' (likely)' : ''))}</div>` : ''}
         <div class="w-type">${flapT(modelOf(a) || a.type || '')}</div>
-        <div class="w-strip" id="wStrip"></div></div>
+        </div>
       ${ph?.src ? `<div class="w-photo"><img src="${esc(ph.src)}" alt="" onerror="this.parentNode.remove()"><small>${ph.credit ? '© ' + esc(ph.credit) + ' · ' : ''}${esc(ph.site || 'Planespotters.net')}</small></div>` : ''}</div>
+      <div class="w-strip" id="wStrip"></div>
       <div class="w-bottom"><div id="wPath"></div><div class="w-mapslot" id="wMapSlot"></div></div>`;
   }
   // the numbers and the path change every second: only touched when they differ
