@@ -971,7 +971,7 @@ function unzipEntries(buf, wanted) {
   return out;
 }
 
-function buildFaaIndex(zip = FAA_ZIP, keep = true) { // keep: set it as the app's registry and save it; false: just return it (the monthly GitHub job)
+function buildFaaIndex(zip = FAA_ZIP, keep = true) { // keep: set it as the app's registry and save it; false: just return it (tools/publish-faa-data.sh)
   const files = unzipEntries(fs.readFileSync(zip), ['MASTER.TXT', 'ACFTREF.TXT']);
   if (!files['MASTER.TXT']) throw new Error('MASTER.txt not found in ReleasableAircraft.zip');
   const rows = buf => {
@@ -999,7 +999,7 @@ function buildFaaIndex(zip = FAA_ZIP, keep = true) { // keep: set it as the app'
   console.log(`FAA registry indexed: ${Object.keys(master).length.toLocaleString()} aircraft`);
   return idx;
 }
-// node server.js --build-faa-index ReleasableAircraft.zip faa-index.json.gz : used by the monthly GitHub job (.github/workflows/faa-data.yml)
+// node server.js --build-faa-index ReleasableAircraft.zip faa-index.json.gz : used by tools/publish-faa-data.sh, which the maintainer runs by hand to refresh the small file on GitHub
 if (process.argv[2] === '--build-faa-index') {
   fs.writeFileSync(process.argv[4], require('zlib').gzipSync(JSON.stringify(buildFaaIndex(process.argv[3], false)), { level: 9 }));
   process.exit(0);
@@ -1022,7 +1022,7 @@ function loadFaa() {
 // One-click download: the page's "Download the FAA registry" / "Update now" button. It happens once, when asked for, and is
 // never repeated by the app on its own; the person presses the button again whenever they want fresher records.
 const FAA_URL = 'https://registry.faa.gov/database/ReleasableAircraft.zip';
-const FAA_GITHUB = 'https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases/download/faa-data/faa-index.json.gz'; // built monthly from the FAA file, with no street addresses
+const FAA_GITHUB = 'https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases/download/faa-data/faa-index.json.gz'; // built from the FAA file by the maintainer, with no street addresses
 let faaDl = { state: 'idle', got: 0, total: 0, error: '' }; // idle | downloading | indexing | done | error
 function downloadFaa() {
   if (faaDl.state === 'downloading' || faaDl.state === 'indexing') return;

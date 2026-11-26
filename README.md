@@ -114,7 +114,7 @@ Each service has its own terms; this project is for personal, non-commercial use
 
 US registration details (co-owners, city/state, serial number, registration dates) come from the FAA.
 Open a plane's panel and press **Get the full FAA record** (or **Download the FAA registry** in Settings, Flights): the app
-downloads a small ready-made file from this project's GitHub (rebuilt monthly from the FAA's public
+downloads a small ready-made file from this project's GitHub (built by the maintainer from the FAA's public
 [ReleasableAircraft.zip](https://registry.faa.gov/database/ReleasableAircraft.zip)), or the FAA's own 73 MB file if that isn't
 there yet, into its own folder and reads it, with nothing else to do. It happens once; the app never updates it on its
 own, and **Update now** in Settings, Flights fetches fresh records whenever you like. You can still download the FAA file
