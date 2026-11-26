@@ -810,6 +810,7 @@
   .rg-tag span { color: var(--muted); margin-left: 8px; letter-spacing: 0; font-weight: 400; }
   .rg-read { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 600; display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 1px; background: color-mix(in srgb, var(--accent) 30%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 3px; overflow: hidden; }
   .rg-read div { background: rgba(5,10,14,.85); padding: 4px 8px; min-width: 0; }
+  .rg-read div.chg b { animation: rgFlash .8s ease-out; } @keyframes rgFlash { 0% { color: var(--accent); text-shadow: 0 0 8px var(--accent); } 100% { color: var(--text); text-shadow: none; } }
   .rg-read small { display: block; font: 9px var(--mono); letter-spacing: 1px; color: var(--muted); }
   .rg-read b { display: block; font: 600 13px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rg-scale { position: absolute; right: 12px; top: 56px; bottom: 96px; z-index: 600; display: flex; gap: 5px; font: 9px var(--mono); color: var(--muted); }
@@ -3672,7 +3673,7 @@ async function openReg(hex, reg) {
 }
 
 // Flight path map inside the tail-number panel (track kept by the server while the plane is in range).
-let rgMap = null, rgLayers = null, rgTimer = null, rgPhotoTimer = null;
+let rgMap = null, rgLayers = null, rgTimer = null, rgPhotoTimer = null, rgLiveTimer = null;
 function startRegMap(hex) {
   if (rgMap) rgMap.remove();
   clearInterval(rgTimer);
@@ -3686,8 +3687,10 @@ function startRegMap(hex) {
   rgMap.setView(home || [27.95, -82.6], 9);
   drawRegTrack(hex, true);
   rgTimer = setInterval(() => drawRegTrack(hex, false), 5000);
+  rgPrev = []; clearInterval(rgLiveTimer); // the readout box follows the plane every second
+  rgLiveTimer = setInterval(() => { const a = tracks.get(hex)?.aircraft; if (a && rgMap) readRegScope(a, [a.lat, a.lon]); }, 1000);
 }
-$('regDlg').addEventListener('close', () => { clearInterval(rgTimer); clearInterval(rgPhotoTimer); if (rgMap) { rgMap.remove(); rgMap = null; } });
+$('regDlg').addEventListener('close', () => { clearInterval(rgTimer); clearInterval(rgPhotoTimer); clearInterval(rgLiveTimer); if (rgMap) { rgMap.remove(); rgMap = null; } });
 
 function renderRegLive(hex) {
   const el = $('rgLive'), a = tracks.get(hex)?.aircraft;
@@ -3767,7 +3770,7 @@ async function drawRegTrack(hex, fit) {
   pts.forEach((q, i) => {
     if (i === 0 || i === pts.length - 1 || (pts.length - 1 - i) % 4) return; // a dot about every 4th point (roughly every half minute), counting back from the plane
     const base = `${q[4] != null ? esc(speedTxt(q[4])) + ' · ' : ''}${esc(fmtAlt(q[2]))}`;
-    rgDots.push({ dot: L.circleMarker([q[0], q[1]], { radius: 4, color: '#0b1020', weight: 1, fillColor: altColor(q[2]), fillOpacity: 1 }).addTo(rgLayers), txt: base, full: base + (q[3] ? ' · ' + timeOf(q[3]) : '') });
+    rgDots.push({ dot: L.circleMarker([q[0], q[1]], { radius: 4, color: '#0b1020', weight: 1, fillColor: altColor(q[2]), fillOpacity: 1 }).bindTooltip(base + (q[3] ? ' · ' + timeOf(q[3]) : ''), { className: 'crumb-tip' }).addTo(rgLayers) });
   });
   const first = pts[0];
   labelRegDots();
@@ -3779,27 +3782,20 @@ async function drawRegTrack(hex, fit) {
   const mins = first[3] ? Math.round((Date.now() - first[3]) / 60000) : null;
   $('rgCap').textContent = `${mins != null ? `LAST ${mins} MIN · ` : ''}${pts.length} PTS${a ? '' : ' · OUT OF RANGE'}`;
 }
-// The dots along the path (about one every half minute) show their speed and altitude on the map itself. A label only appears where
-// there is room (at least ~120 px from the last one); every dot shows its reading, with the time, on hover. Redone on each zoom.
+// The dots along the path (about one every half minute) carry their reading, with the time, on hover; the live box below says the rest.
 let rgDots = [];
-function labelRegDots() {
-  if (!rgMap) return;
-  let lastP = null, side = 0;
-  for (const d of rgDots) {
-    const p = rgMap.latLngToContainerPoint(d.dot.getLatLng()), show = !lastP || Math.hypot(p.x - lastP.x, p.y - lastP.y) >= 120;
-    d.dot.unbindTooltip();
-    d.dot.bindTooltip(show ? d.txt : d.full, { permanent: show, direction: side++ % 2 ? 'left' : 'right', offset: [side % 2 ? -6 : 6, 0], className: 'crumb-tip' });
-    if (show) lastP = p;
-  }
-}
+function labelRegDots() {}
 // the readout along the bottom of the scope: the plane's numbers right now
 const now0 = (a, pts) => a ? [a.lat, a.lon] : pts.length ? [pts[pts.length - 1][0], pts[pts.length - 1][1]] : null;
+let rgPrev = [];
 function readRegScope(a, pos) {
   const cell = (k, v) => `<div><small>${k}</small><b>${v}</b></div>`;
   const vr = a?.vr != null ? (a.vr > 0 ? '+' : '') + Math.round(a.vr) : '—';
   $('rgRead').innerHTML = !a ? cell('STATUS', 'NO LIVE DATA') + (pos ? cell('LAST POS', pos[0].toFixed(3) + ', ' + pos[1].toFixed(3)) : '') :
     cell('ALT', fmtAlt(a.alt)) + cell('GS', a.gs != null ? speedTxt(a.gs) : '—') + cell('HDG', a.track != null ? String(Math.round(a.track)).padStart(3, '0') + '°' : '—')
     + cell('V/S', vr) + cell('RNG', a.dist != null ? distTxt(a.dist) : '—') + cell('POS', pos ? pos[0].toFixed(3) + ', ' + pos[1].toFixed(3) : '—');
+  const cells = [...$('rgRead').children]; // what changed since the last second flashes
+  cells.forEach((c, k) => { const t = c.querySelector('b').textContent; if (rgPrev[k] != null && rgPrev[k] !== t) c.classList.add('chg'); rgPrev[k] = t; });
 }
 
 // ---------- nearby scrolling alert ----------
