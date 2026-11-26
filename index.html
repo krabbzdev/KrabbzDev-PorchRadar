@@ -5007,7 +5007,7 @@ function summaryCard() {
 $('tdCard').onclick = summaryCard;
 
 // ---------- quiet hours (Settings > Alerts): no chime or voice between two times of day ----------
-var quietOn = load('skyQuiet', false), quietFrom = load('skyQuietFrom', '22:00'), quietTo = load('skyQuietTo', '07:00');
+var quietOn = load('skyQuiet', true), quietFrom = load('skyQuietFrom', '22:00'), quietTo = load('skyQuietTo', '07:00');
 function isQuiet(now = new Date()) {
   if (!quietOn) return false;
   const mins = s => { const [hh, mm] = String(s).split(':').map(Number); return hh * 60 + (mm || 0); };
