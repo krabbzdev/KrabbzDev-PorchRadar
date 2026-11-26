@@ -410,6 +410,10 @@
   .to-photo { height: 240px; background: var(--thumb-bg) center/cover no-repeat; position: relative; display: grid; place-items: center; }
   .to-photo .credit { position: absolute; right: 8px; bottom: 6px; font-size: 10px; color: #fff; background: rgba(0,0,0,.55); padding: 2px 6px; border-radius: 4px; text-decoration: none; }
   .to-main { padding: 16px 18px; }
+  .to-photo { cursor: pointer; }
+  .to-dots { position: absolute; left: 0; right: 0; bottom: 26px; display: flex; justify-content: center; gap: 6px; }
+  .to-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.4); border: 1px solid rgba(0,0,0,.4); }
+  .to-dots i.on { background: #fff; }
   .to-cs { font: 700 34px var(--mono); line-height: 1.1; }
   .to-sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
   .to-model { font-size: 18px; margin-top: 10px; }
@@ -2857,7 +2861,7 @@ $('takeoverOn').addEventListener('change', e => { takeoverOn = e.target.checked;
 let toHex = null, toMap = null, toLayers = null, toLeaveTimer = null, toFitted = false, toOpenedAt = 0;
 // While the overhead close-up is open, a marker is dropped on the plane's position every 2 seconds, each with its speed,
 // heading, altitude and position written beside it.
-let toCrumbs = [], toCrumbTimer = null;
+let toCrumbs = [], toCrumbTimer = null, toPhotoBump = 0; const toPreloaded = new Set(); // toPhotoBump: clicks on the photo move it on
 const addCrumb = a => toCrumbs.push({ lat: a.lat, lon: a.lon, gs: a.gs, track: a.track, alt: a.alt, vr: a.vr });
 // hex -> last time it was inside the radius. Each plane gets one takeover/announcement per visit:
 // it's forgotten only after 2 min outside the radius, and kept across page reloads.
@@ -2915,7 +2919,7 @@ function updateTakeover() {
 
 function openTakeover(a) {
   toHex = a.hex; toFitted = false; toOpenedAt = Date.now();
-  toCrumbs = []; addCrumb(a); clearInterval(toCrumbTimer);
+  toCrumbs = []; toPhotoBump = 0; addCrumb(a); clearInterval(toCrumbTimer);
   toCrumbTimer = setInterval(() => { const p = current.find(x => x.hex === toHex); if (p) { addCrumb(p); drawTakeover(p); } }, 2000);
   announced.set(a.hex, toOpenedAt); save('skyAnnounced', [...announced]);
   $('takeover').classList.add('show');
@@ -3257,6 +3261,7 @@ function closeTakeover() {
   $('takeover').classList.remove('show');
 }
 $('toClose').onclick = () => closeTakeover(true);
+$('toInfo').addEventListener('click', e => { if (e.target.closest('#toPhoto') && !e.target.closest('a')) { toPhotoBump++; const a = current.find(x => x.hex === toHex); if (a) drawTakeover(a); } }); // a click on the photo shows the next one
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && toHex) closeTakeover(true); });
 
 function drawTakeover(a) {
@@ -3297,17 +3302,19 @@ function drawTakeover(a) {
   if (proj) pts.push(ahead(a, 45));
   toMap.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 15, animate: toFitted });
   toFitted = true;
-  // The 2-second markers: speed and heading, altitude with a climb or descent arrow, and the position. Each is a dot; only a dot at
-  // least ~95 px clear of the last labelled one gets its label on the map (the rest show theirs on hover), alternating above and below.
+  // The 2-second markers: each is a dot. A dot at least ~120 px clear of the last labelled one gets one short line on the map (speed and
+  // altitude); every dot shows the full reading (speed, heading, altitude, position) on hover, and a labelled one on click.
   const zNow = Math.min(toMap.getBoundsZoom(L.latLngBounds(pts).pad(0.25)), 15);
   let lastP = null, flip = 0;
   toCrumbs.forEach((c, i) => {
     if (i === toCrumbs.length - 1) return; // the plane itself is drawn on the newest one
     const hdg = c.track != null ? String(Math.round(c.track)).padStart(3, '0') + '°' : '—';
-    const txt = `<b>${c.gs != null ? esc(speedTxt(c.gs)) : '—'} · ${hdg}</b><br>${esc(fmtAlt(c.alt))}${c.vr > 300 ? ' ▲' : c.vr < -300 ? ' ▼' : ''}<br>${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`;
-    const pt = toMap.project([c.lat, c.lon], zNow), show = !lastP || pt.distanceTo(lastP) >= 95;
+    const arrow = c.vr > 300 ? ' ▲' : c.vr < -300 ? ' ▼' : '';
+    const txt = `<b>${c.gs != null ? esc(speedTxt(c.gs)) : '—'} · ${hdg}</b><br>${esc(fmtAlt(c.alt))}${arrow}<br>${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`; // the full reading, on hover
+    const short = `${c.gs != null ? esc(speedTxt(c.gs)) : '—'} · ${esc(fmtAlt(c.alt))}${arrow}`; // one short line on the map
+    const pt = toMap.project([c.lat, c.lon], zNow), show = !lastP || pt.distanceTo(lastP) >= 120;
     const dot = L.circleMarker([c.lat, c.lon], { radius: 4, color: '#0b1020', weight: 1.5, fillColor: '#fff', fillOpacity: 1 }).addTo(toLayers);
-    if (show) { lastP = pt; dot.bindTooltip(txt, { permanent: true, direction: flip++ % 2 ? 'top' : 'bottom', offset: [0, flip % 2 ? 5 : -5], className: 'crumb-tip' }); }
+    if (show) { lastP = pt; dot.bindTooltip(short, { permanent: true, direction: flip++ % 2 ? 'top' : 'bottom', offset: [0, flip % 2 ? 5 : -5], className: 'crumb-tip' }); dot.bindPopup(txt, { className: 'apt-pop', closeButton: false }); }
     else dot.bindTooltip(txt, { className: 'crumb-tip' });
   });
 
@@ -3325,9 +3332,16 @@ function drawTakeover(a) {
     ? `<div class="to-cpa"><b>Moving away</b>Closest pass was just now · ${a.dist.toFixed(2)} mi from home</div>`
     : `<div class="to-cpa"><b>${c.dist.toFixed(2)} mi in ${Math.round(c.secs)} s</b>Predicted closest approach to home</div>`;
   const sp = specialOf(a);
+  // the photo library for this plane: Planespotters photos, then Airport-Data ones. One shows at a time and the next comes every 4 seconds
+  // (or on a click); the dots show how many there are.
+  const pics = [], seenSrc = new Set();
+  for (const q of [...(Lk.photos || []), ...(Lk.photo ? [Lk.photo] : []), ...photosFor(a).map(x => ({ ...x, site: 'Airport-Data.com' }))])
+    if (q?.src && !seenSrc.has(q.src)) { seenSrc.add(q.src); pics.push(q); }
+  if (pics.length > 1 && !toPreloaded.has(a.hex)) { toPreloaded.add(a.hex); pics.forEach(q => { new Image().src = q.src; }); }
+  const picAt = pics.length ? (Math.floor((Date.now() - toOpenedAt) / 4000) + toPhotoBump) % pics.length : 0, pic = pics[picAt];
   $('toInfo').innerHTML = `
-    <div class="to-photo" style="${Lk.photo?.src ? `background-image:url('${Lk.photo.src}')` : ''}">${Lk.photo?.src ? '' : planeSvg('#26314f', 45)}
-      ${photoCredit(Lk.photo)}</div>
+    <div class="to-photo" id="toPhoto" style="${pic ? `background-image:url('${pic.src}')` : ''}">${pic ? '' : planeSvg('#26314f', 45)}
+      ${photoCredit(pic)}${pics.length > 1 ? `<div class="to-dots" title="${pics.length} photos of this plane. Click the photo for the next one.">${pics.map((_, i) => `<i class="${i === picAt ? 'on' : ''}"></i>`).join('')}</div>` : ''}</div>
     <div class="to-main">
       <div class="to-cs">${a.flight || reg || a.hex.toUpperCase()}</div>
       <div class="to-sub">${[reg ? tailLink(a.hex, reg, reg + ' · owner info') : '', airlineOf(a), ownerOf(a) ? 'Owner: ' + ownerOf(a) : ''].filter(Boolean).join(' · ')}</div>
