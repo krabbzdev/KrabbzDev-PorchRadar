@@ -297,23 +297,34 @@
   #wall { position: fixed; inset: 0; z-index: 3500; background: #000; color: #ffb000; display: none; flex-direction: column; justify-content: center;
     padding: 4vh 5vw; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; text-transform: uppercase; cursor: pointer; overflow: hidden; }
   #wall.show { display: flex; }
-  #wall::after { content: ""; position: absolute; inset: 0; pointer-events: none; /* the LED dot grid */
-    background: radial-gradient(circle at center, transparent 52%, #000 62%) 0 0 / 6px 6px; }
   #wall .w-top { display: flex; align-items: center; gap: 3vw; }
   #wall .w-logo { width: 14vw; height: 14vw; max-width: 220px; max-height: 220px; flex: none; border-radius: 14px; background: #fff; display: grid; place-items: center; overflow: hidden; }
   #wall .w-logo.txt { background: #fff; color: #033C74; font-weight: 800; letter-spacing: .02em; text-align: center; }
   #wall .w-logo.txt span { font-size: clamp(22px, 4.6vw, 76px); line-height: 1; }
   #wall .w-logo.txt.long span { font-size: clamp(16px, 3vw, 50px); }
   #wall .w-logo img { width: 86%; height: 86%; object-fit: contain; }
-  #wall .w-flight { font-size: clamp(40px, 11vw, 190px); font-weight: 800; line-height: 1; letter-spacing: .02em; text-shadow: 0 0 18px currentColor; }
+  #wall .w-flight { font-size: clamp(30px, 6.4vw, 110px); font-weight: 800; line-height: 1; }
   #wall .w-air { font-size: clamp(16px, 2.6vw, 44px); color: #fff; opacity: .85; margin-top: 1vh; }
-  #wall .w-route { font-size: clamp(30px, 8vw, 140px); font-weight: 800; color: #fff; margin: 4vh 0 0; text-shadow: 0 0 14px #fff6; white-space: nowrap; }
-  #wall .w-route i { color: #ffb000; font-style: normal; }
+  #wall .w-route { font-size: clamp(28px, 6vw, 100px); font-weight: 800; color: #fff; margin: 3vh 0 0; display: flex; align-items: center; gap: .3em; }
+  #wall .w-route .w-arrow { color: #ffb000; }
   #wall .w-cities { font-size: clamp(14px, 2.2vw, 38px); color: #8fd3ff; margin-top: .5vh; }
   #wall .w-type { font-size: clamp(16px, 2.8vw, 48px); color: #7dff9a; margin-top: 3vh; }
   #wall .w-strip { display: flex; gap: 4vw; margin-top: 4vh; flex-wrap: wrap; }
-  #wall .w-strip span { display: flex; flex-direction: column; font-size: clamp(22px, 5vw, 86px); font-weight: 800; color: #fff; }
+  #wall .w-strip > span { display: flex; flex-direction: column; font-size: clamp(20px, 3.6vw, 62px); font-weight: 800; color: #fff; }
   #wall .w-strip em { font-style: normal; font-size: clamp(11px, 1.4vw, 24px); color: #ffb000; letter-spacing: .15em; }
+  #wall .w-main { display: flex; gap: 3vw; align-items: flex-start; }
+  #wall .w-left { flex: 1; min-width: 0; }
+  #wall .w-photo { flex: 0 0 30vw; max-width: 30vw; }
+  #wall .w-photo img { width: 100%; max-height: 38vh; object-fit: cover; border-radius: 12px; display: block; }
+  #wall .w-photo small { display: block; font-size: clamp(10px, 1.1vw, 18px); color: #ffb00099; margin-top: .6vh; text-transform: none; }
+  @media (max-width: 800px) { #wall .w-main { flex-direction: column; } #wall .w-photo { flex: none; max-width: 100%; } }
+  /* the split-flap look: every letter is a dark tile with a centre line, and flips when a new plane comes up */
+  #wall .fw { display: inline-flex; flex-wrap: wrap; gap: .45em; }
+  #wall .fwd { display: inline-flex; gap: .06em; }
+  #wall .fl { font-style: normal; display: inline-block; position: relative; width: .68em; height: 1.14em; line-height: 1.14em; text-align: center; background: #1b1b1b; border-radius: .08em; overflow: hidden; }
+  #wall .fl::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #000; }
+  #wall .fl.flap { animation: wallFlap .06s linear; }
+  @keyframes wallFlap { 0% { transform: scaleY(1); } 50% { transform: scaleY(.15); } 100% { transform: scaleY(1); } }
   #wall .w-path { margin-top: 3vh; }
   #wall .w-path svg { width: 100%; height: clamp(70px, 15vh, 170px); display: block; }
   #wall .w-idle { text-align: center; color: #ffb000; }
@@ -1593,7 +1604,7 @@ sweepCv.className = 'sweep-cv';
 map.getContainer().appendChild(sweepCv);
 let sweepOn = load('skySweep', true), sweepRaf = 0, sweepRgb = '76,201,240', sweepColorAt = 0;
 $('sweepOn').checked = sweepOn;
-let sweepStr = load('skySweepStr', 1); // 0.1 to 1: how strong the beam looks
+let sweepStr = load('skySweepStr', 0.7); // 0.1 to 1: how strong the beam looks
 const showSweepStr = () => { $('sweepStrIn').value = sweepStr; $('sweepStrVal').textContent = Math.round(sweepStr * 100) + '%'; };
 showSweepStr();
 $('sweepStrIn').addEventListener('input', e => { sweepStr = +e.target.value; save('skySweepStr', sweepStr); showSweepStr(); });
@@ -1797,7 +1808,7 @@ const clockTxt = d => d ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2
 
 // Day/night line: the night side of the earth shaded, redrawn every 5 minutes (🌙 Day/Night in the top bar)
 map.createPane('night').style.zIndex = 340; // under the weather radar and everything else
-let nightOn = load('skyNight', true), nightShape = null;
+let nightOn = load('skyNight', false), nightShape = null;
 $('nightOn').checked = nightOn;
 function drawNight() {
   if (nightShape) { map.removeLayer(nightShape); nightShape = null; }
@@ -4575,41 +4586,71 @@ function wallPath(a) {
     ${to ? `<text x="500" y="126" text-anchor="middle" font-size="20" fill="#8fd3ff">${esc(distTxt(distMi(here, to.pos), 0))} to go${guessed ? ' (likely)' : ''}</text>` : ''}
   </svg></div>`;
 }
+// Text as split-flap tiles: one dark tile per letter (words wrap together). flipIn() makes them flip into place.
+const flapT = text => `<span class="fw">${String(text).split(/\s+/).filter(Boolean).map(w => `<span class="fwd">${[...w].map(c => `<i class="fl" data-c="${esc(c)}">${esc(c)}</i>`).join('')}</span>`).join('')}</span>`;
+let wallSig = '', wallAnim = [];
+function flipIn(root) {
+  wallAnim.forEach(clearTimeout); wallAnim = [];
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const tiles = [...root.querySelectorAll('.fl')], gap = Math.min(28, 1100 / (tiles.length || 1)), CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  tiles.forEach((t, i) => {
+    const end = t.dataset.c, n = 3 + (i % 4);
+    t.textContent = ' ';
+    for (let k = 0; k <= n; k++) wallAnim.push(setTimeout(() => {
+      t.textContent = k < n ? CH[Math.floor(Math.random() * CH.length)] : end;
+      t.classList.remove('flap'); void t.offsetWidth; t.classList.add('flap');
+    }, i * gap + k * 60));
+  });
+}
 function drawWall() {
   const list = wallPlanes(), body = $('wallBody');
   if (!list.length) {
+    wallSig = '';
     const t = new Date();
     body.innerHTML = `<div class="w-idle"><b>${t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</b><small>No planes in range right now</small></div>`;
     $('wallCount').textContent = '';
     return;
   }
   if (Date.now() - wallSince >= 8000) { wallIdx++; wallSince = Date.now(); }
-  const a = list[wallIdx % list.length], rp = routeParts(a), logo = logoUrl(a);
-  requestLookup(a.hex); requestLookup(list[(wallIdx + 1) % list.length].hex); // so the next one already has its route
+  const a = list[wallIdx % list.length], rp = routeParts(a), logo = logoUrl(a), ph = look(a.hex).photo;
+  requestLookup(a.hex); requestLookup(list[(wallIdx + 1) % list.length].hex); // so the next one already has its route and photo
   const tag = (a.flight || '').match(/^([A-Z]{3})\d/)?.[1] || (a.reg || a.flight || a.hex).toUpperCase(); // the text tile when there is no logo
   const vr = a.vr > 300 ? ' ↑' : a.vr < -300 ? ' ↓' : '';
-  const short = x => (x || '').split(/[,(]/)[0].trim();
-  body.innerHTML = `<div class="w-top">
-      <div class="w-logo${logo ? '' : ' txt'}${tag.length > 4 ? ' long' : ''}">${logo ? `<img src="${esc(logo)}" alt="" data-t="${esc(tag)}" onerror="const p=this.parentNode;p.classList.add('txt');p.textContent=this.dataset.t;p.innerHTML='<span>'+p.innerHTML+'</span>'">` : `<span>${esc(tag)}</span>`}</div>
-      <div><div class="w-flight">${esc(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${esc(airlineOf(a) || ownerOf(a) || '')}</div></div></div>
-    ${rp.fromIcao || rp.toIcao ? `<div class="w-route">${esc((rp.fromIcao || '?').replace(/^K/, ''))} <i>→</i> ${esc((rp.toIcao || '?').replace(/^K/, ''))}</div>
-      <div class="w-cities">${esc(short(rp.from))} → ${esc(short(rp.to))}${rp.guessed ? ' (likely)' : ''}</div>` : ''}
-    <div class="w-type">${esc(modelOf(a) || a.type || '')}</div>
-    <div class="w-strip">
-      <span><em>ALT</em>${esc(fmtAlt(a.alt))}${vr}</span><span><em>SPEED</em>${esc(speedTxt(a.gs) || '—')}</span>
-      <span><em>HDG</em>${a.track != null ? String(Math.round(a.track) % 360).padStart(3, '0') + '°' : '—'}</span>
-      <span><em>DIST</em>${a.dist != null ? esc(distTxt(a.dist) + ' ' + compass(a.brg)) : '—'}</span></div>${wallPath(a)}`;
+  const short = x => (x || '').split(/[,(]/)[0].trim(), code = x => (x || '?').replace(/^K(?=[A-Z]{3}$)/, '');
+  const strip = `<span><em>ALT</em>${flapT(fmtAlt(a.alt) + vr)}</span><span><em>SPEED</em>${flapT(speedTxt(a.gs) || '—')}</span>`
+    + `<span><em>HDG</em>${flapT(a.track != null ? String(Math.round(a.track) % 360).padStart(3, '0') + '°' : '—')}</span>`
+    + `<span><em>DIST</em>${flapT(a.dist != null ? distTxt(a.dist) + ' ' + compass(a.brg) : '—')}</span>`;
+  // everything that doesn't change second to second: rebuilt (and flipped) only when the plane or what we know about it changes
+  const sig = [a.hex, a.flight, rp.fromIcao, rp.toIcao, rp.from, rp.to, rp.guessed, logo, ph?.src, airlineOf(a), modelOf(a)].join('|');
+  const fresh = sig !== wallSig;
+  if (fresh) {
+    wallSig = sig;
+    body.innerHTML = `<div class="w-main"><div class="w-left">
+        <div class="w-top">
+          <div class="w-logo${logo ? '' : ' txt'}${tag.length > 4 ? ' long' : ''}">${logo ? `<img src="${esc(logo)}" alt="" data-t="${esc(tag)}" onerror="const p=this.parentNode;p.classList.add('txt');p.textContent=this.dataset.t;p.innerHTML='<span>'+p.innerHTML+'</span>'">` : `<span>${esc(tag)}</span>`}</div>
+          <div><div class="w-flight">${flapT(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${flapT(airlineOf(a) || ownerOf(a) || '')}</div></div></div>
+        ${rp.fromIcao || rp.toIcao ? `<div class="w-route">${flapT(code(rp.fromIcao))}<span class="w-arrow">→</span>${flapT(code(rp.toIcao))}</div>
+          <div class="w-cities">${flapT(short(rp.from) + ' → ' + short(rp.to) + (rp.guessed ? ' (likely)' : ''))}</div>` : ''}
+        <div class="w-type">${flapT(modelOf(a) || a.type || '')}</div>
+        <div class="w-strip" id="wStrip"></div></div>
+      ${ph?.src ? `<div class="w-photo"><img src="${esc(ph.src)}" alt="" onerror="this.parentNode.remove()"><small>${ph.credit ? '© ' + esc(ph.credit) + ' · ' : ''}${esc(ph.site || 'Planespotters.net')}</small></div>` : ''}</div>
+      <div id="wPath"></div>`;
+  }
+  // the numbers and the path change every second: only touched when they differ
+  const set = (id, html) => { const el = $(id); if (el && el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; } };
+  set('wStrip', strip); set('wPath', wallPath(a));
+  if (fresh) flipIn(body);
   $('wallCount').textContent = `Plane ${wallIdx % list.length + 1} of ${list.length}`;
 }
 function openWall() {
-  wallOn = true; wallIdx = 0; wallSince = Date.now();
+  wallOn = true; wallIdx = 0; wallSince = Date.now(); wallSig = '';
   $('wall').classList.add('show');
   try { $('wall').requestFullscreen?.().catch(() => {}); } catch (e) {}
   drawWall(); wallTimer = setInterval(drawWall, 1000);
 }
 function closeWall() {
   if (!wallOn) return;
-  wallOn = false; clearInterval(wallTimer);
+  wallOn = false; clearInterval(wallTimer); wallAnim.forEach(clearTimeout); wallSig = '';
   $('wall').classList.remove('show');
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }
@@ -4837,7 +4878,7 @@ $('tailsOn').addEventListener('change', e => {
   update(current.length ? rawCache() : []);
 });
 // 0.05 to 1 (default 0.25): how strong trails look. The last-hour lines use 90% of it, the live line behind each plane 110%.
-var trailMins = load('skyTrailMins', 60); // how many minutes back the trail lines go: 15, 30, 60 or 180
+var trailMins = load('skyTrailMins', 15); // how many minutes back the trail lines go: 15, 30, 60 or 180
 $('trailMinsIn').value = trailMins;
 $('trailMinsIn').addEventListener('change', e => { trailMins = +e.target.value; save('skyTrailMins', trailMins); drawTrails(); });
 var trailStr = load('skyTrailStr', 0.25);

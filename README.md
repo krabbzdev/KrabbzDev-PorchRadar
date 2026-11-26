@@ -60,9 +60,10 @@ bottom-right corner.
   frequencies, current weather, planes arriving and leaving right now, a Wikipedia summary and handy links
 - **Planned route**: click a plane to draw its route on the map, from its departure airport to its destination
 - **Aircraft details**: photo, maker and model, airline, owner, route, altitude, speed and time tracked
-- **Flight Wall**: the 🧱 Flight Wall button in the top bar goes full screen with an LED-board look: airline logo, flight
-  number, route, aircraft type, altitude, speed, heading and distance for each plane in range, nearest first, 8 seconds
-  each (click for the next, Esc to close). Good for a spare monitor or TV
+- **Flight Wall**: the 🧱 Flight Wall button in the top bar goes full screen with an airport split-flap board look: the
+  airline logo (or a text tile), flight number, route, aircraft type and photo, altitude, speed, heading and distance, and
+  a line showing the path of the flight, for each plane in range, nearest first, 8 seconds each (click for the next, Esc
+  to close). Good for a spare monitor or TV
 - **Backup plane feed**: optional. Add your own OpenSky API client in Settings (Flights) and the app falls back to OpenSky, at most every 30 seconds, whenever adsb.fi is down
 - **Favorite planes**: star any plane (or type its tail number) and the app watches for it worldwide, shows whether
   it's flying now or where it was last seen, and pops up when it flies into range
