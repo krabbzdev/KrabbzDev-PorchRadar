@@ -66,7 +66,7 @@ bottom-right corner.
   to close). Good for a spare monitor or TV
 - **Backup plane feed**: optional. Add your own OpenSky API client in Settings (Flights) and the app falls back to OpenSky, at most every 30 seconds, whenever adsb.fi is down
 - **Favorite planes**: star any plane (or type its tail number) and the app watches for it worldwide, shows whether
-  it's flying now or where it was last seen. When one is in range it can't be missed: a gold banner across the top, a
+  it's flying now or where it was last seen. When one is in range (or a plane matching your Watch list is) it can't be missed: a gold banner across the top, a
   glowing star on its map marker, a spoken alert (outside quiet hours), and a badge on the Flight Wall. A few planes are
   there from the start (N711MG, N29UB, N247WE, N628TS, N7478D, and the two Air Force One jets); remove any you don't want and it stays removed
 - **Plane finder**: type a tail number (like N1932K) in the Jump to box to go to the plane, live, or to where the app

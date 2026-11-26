@@ -932,7 +932,7 @@
   <div class="stat" title="Golden hour: the hour after sunrise and the hour before sunset, the best light for photographing planes"><div class="k">🌅 Golden hour</div><div class="v small" id="sGold">–</div><div class="s" id="sGoldSub">&nbsp;</div></div>
 </section>
 
-<div class="fav-bar" id="favBar" role="button" tabindex="0" title="One of your favorite planes is in range. Click to find it on the map."></div>
+<div class="fav-bar" id="favBar" role="button" tabindex="0" title="A favorite plane or a Watch list match is in range. Click to find it on the map."></div>
 <div class="banner" id="banner"></div>
 
 <main>
@@ -2116,7 +2116,7 @@ const SPECIAL = {
 };
 
 function planeIcon(a, inside) {
-  const sp = specialOf(a), fav = isFav(a.hex, a.reg);
+  const sp = specialOf(a), fav = isHot(a);
   // special aircraft and your favorites stay visible (and in colour) even outside the radius
   const show = inside || sp || fav;
   const color = show ? altColor(a.alt) : '#5b6684';
@@ -2368,7 +2368,7 @@ function update(list) {
     if (t.points.length > 120) t.points.shift();
     t.aircraft = a; t.updated = now;
 
-    const visible = a.inside || showAll || !!specialOf(a) || isFav(a.hex, a.reg);
+    const visible = a.inside || showAll || !!specialOf(a) || isHot(a);
     notifySpecial(a);
     notifyWatch(a);
     notifyFavorite(a);
@@ -2391,7 +2391,7 @@ function update(list) {
         if (!planeLayer.hasLayer(t.marker)) planeLayer.addLayer(t.marker);
         if (t.marker.isTooltipOpen()) t.marker.setTooltipContent(planeTip(a)); // keep an open card live
       }
-      t.marker.setZIndexOffset(specialOf(a) || isFav(a.hex, a.reg) ? 700 : a.inside ? 500 : 0);
+      t.marker.setZIndexOffset(specialOf(a) || isHot(a) ? 700 : a.inside ? 500 : 0);
       if (tailsOn && a.inside && t.points.length > 1) {
         if (!t.trail) t.trail = L.polyline(t.points, { weight: 2, opacity: Math.min(1, trailStr * 1.1), interactive: false }).addTo(trailLayer);
         t.trail.setLatLngs(t.points).setStyle({ color: altColor(a.alt) });
@@ -4425,6 +4425,9 @@ $('jumpIn').addEventListener('keydown', e => { if (e.key === 'Escape') { $('jump
 // when one flies into range.
 // (var and function declarations: the plane list is first drawn before this part of the page has run)
 var favs = [], favHex, favReg;
+// Gold treatment (banner, map star, Flight Wall badge): your favorites, and anything matching your Watch list.
+// (watchText is a var set further down the page, so it can still be undefined on the very first draw.)
+function isHot(a) { return isFav(a.hex, a.reg) || (!!watchText && !!watchOf(a)); }
 function isFav(hex, reg) { return !!favHex && (favHex.has(hex) || (!!reg && favReg.has(reg.toUpperCase()))); }
 function favBtn(hex, reg, text) {
   const on = isFav(hex, reg);
@@ -4511,11 +4514,13 @@ setInterval(loadFavs, 20000);
 // pop-up when a favorite flies into range of home (once per visit)
 var favNotified;
 function updateFavBar() {
-  const el = $('favBar'), hits = current.filter(a => a.lat != null && isFav(a.hex, a.reg));
+  const el = $('favBar'), hits = current.filter(a => a.lat != null && isHot(a));
   el.classList.toggle('show', !!hits.length);
   if (!hits.length) return;
   el.dataset.hex = hits[0].hex;
-  el.innerHTML = '⭐ ' + hits.map(a => `<u>${esc(a.reg || a.flight || a.hex.toUpperCase())}</u>${a.desc ? ' · ' + esc(nice(a.desc)) : ''}${a.dist != null ? ` · ${esc(distTxt(a.dist))} ${compass(a.brg)}` : ''}`).join(' &nbsp; ⭐ ') + ' — your favorite is on screen';
+  // ⭐ a favorite, 👀 a Watch list match (named by its callsign)
+  el.innerHTML = hits.map(a => { const fav = isFav(a.hex, a.reg), name = fav ? a.reg || a.flight || a.hex.toUpperCase() : a.flight || a.reg || a.hex.toUpperCase();
+    return `${fav ? '⭐' : '👀'} <u>${esc(name)}</u>${a.desc ? ' · ' + esc(nice(a.desc)) : ''}${a.dist != null ? ` · ${esc(distTxt(a.dist))} ${compass(a.brg)}` : ''}`; }).join(' &nbsp; ') + ' — on screen now';
 }
 $('favBar').addEventListener('click', e => { const h = e.currentTarget.dataset.hex; if (h) select(h, true); });
 function notifyFavorite(a) {
@@ -4611,7 +4616,7 @@ function wallPlanes() {
     const cur = current.find(x => x.hex === hex), live = !!cur && cur.dist != null && cur.dist <= WALL_MI;
     out.push({ a: cur || w.a, w, live });
   }
-  return out.sort((x, y) => (y.live - x.live) || (isFav(y.a.hex, y.a.reg) - isFav(x.a.hex, x.a.reg)) || (x.live ? (x.a.dist ?? 99) - (y.a.dist ?? 99) : y.w.last - x.w.last));
+  return out.sort((x, y) => (y.live - x.live) || (isHot(y.a) - isHot(x.a)) || (x.live ? (x.a.dist ?? 99) - (y.a.dist ?? 99) : y.w.last - x.w.last));
 }
 const hm24 = t => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }; // military time
 // The path of the flight: a curve from the departure airport to the destination, solid where the plane has been, dotted
@@ -4715,14 +4720,14 @@ function drawWall() {
     + `<span><em>SEEN</em>${flapT(it.live || hm24(it.w.first) === hm24(it.w.last) ? hm24(it.w.first) : hm24(it.w.first) + '–' + hm24(it.w.last))}</span>`;
   const gone = it.live ? '' : `<div class="w-gone">${(m => m < 1 ? 'Just left' : 'Left ' + m + ' min ago')(Math.floor((Date.now() - it.w.last) / 60000))}</div>`;
   // everything that doesn't change second to second: rebuilt (and flipped) only when the plane or what we know about it changes
-  const sig = [a.hex, a.flight, rp.fromIcao, rp.toIcao, rp.from, rp.to, rp.guessed, logo, ph?.src, airlineOf(a), modelOf(a), isFav(a.hex, a.reg)].join('|');
+  const sig = [a.hex, a.flight, rp.fromIcao, rp.toIcao, rp.from, rp.to, rp.guessed, logo, ph?.src, airlineOf(a), modelOf(a), isHot(a)].join('|');
   const fresh = sig !== wallSig;
   if (fresh) {
     wallSig = sig;
     body.innerHTML = `<div class="w-main"><div class="w-left">
         <div class="w-top">
           <div class="w-logo${logo ? '' : ' txt'}${tag.length > 4 ? ' long' : ''}">${logo ? `<img src="${esc(logo)}" alt="" data-t="${esc(tag)}" onerror="const p=this.parentNode;p.classList.add('txt');p.textContent=this.dataset.t;p.innerHTML='<span>'+p.innerHTML+'</span>'">` : `<span>${esc(tag)}</span>`}</div>
-          <div><div class="w-flight">${flapT(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${flapT(airlineOf(a) || ownerOf(a) || '')}</div>${isFav(a.hex, a.reg) ? '<div class="w-fav">★ Favorite plane</div>' : ''}<div id="wState"></div></div></div>
+          <div><div class="w-flight">${flapT(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${flapT(airlineOf(a) || ownerOf(a) || '')}</div>${isFav(a.hex, a.reg) ? '<div class="w-fav">★ Favorite plane</div>' : isHot(a) ? '<div class="w-fav">★ Watch list</div>' : ''}<div id="wState"></div></div></div>
         ${rp.fromIcao || rp.toIcao ? `<div class="w-route">${flapT(code(rp.fromIcao))}<span class="w-arrow">→</span>${flapT(code(rp.toIcao))}</div>
           <div class="w-cities">${flapT(short(rp.from) + ' → ' + short(rp.to) + (rp.guessed ? ' (likely)' : ''))}</div>` : ''}
         <div class="w-type">${flapT(modelOf(a) || a.type || '')}</div>
