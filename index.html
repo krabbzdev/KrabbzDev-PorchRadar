@@ -1,7 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="radar">
 <head>
 <meta charset="utf-8">
+<script>/* the saved theme, before anything is drawn, so the page never shows the blue Midnight colours first */try { var t = JSON.parse(localStorage.getItem("skyTheme")); if (["midnight", "daylight", "radar", "dusk", "soft"].indexOf(t) >= 0) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KrabbzDev's Porch Radar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,6 +30,19 @@
   :root[data-theme="radar"] { --bg: #030805; --panel: #07110a; --panel-2: #0b1a10; --line: #12351c; --text: #b8ffcb; --muted: #5fa877;
     --accent: #39ff7a; --good: #39ff7a; --warn: #ffb000; --hot: #ff6b4a; --map-bg: #020a05; --thumb-bg: #08190d; }
   :root[data-theme="radar"] :is(.card, .stat, dialog, .place, button, input, select, #map) { border-radius: 3px; }
+  /* Soft Midnight: the dark look with calmer colours, rounder shapes and pill buttons */
+  :root[data-theme="soft"] { --bg: #141a2b; --panel: #1a2136; --panel-2: #1f2740; --line: #2a3350; --text: #e6eaf4; --muted: #9aa5c0;
+    --accent: #8fc7ee; --good: #9ad3a8; --warn: #ecc47a; --hot: #f08a98; --map-bg: #1b2338; --thumb-bg: #182036; --on-accent: #10202e;
+    scrollbar-color: var(--line) transparent; }
+  :root[data-theme="soft"] ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+  :root[data-theme="soft"] :is(button, a.btn, .layers-menu > summary) { border-radius: 999px; border-color: transparent; }
+  :root[data-theme="soft"] :is(button, a.btn, .layers-menu > summary):hover { border-color: var(--accent); }
+  :root[data-theme="soft"] :is(input, select, textarea) { border-radius: 12px; }
+  :root[data-theme="soft"] :is(.stat, dialog, .place, #map) { border-radius: 18px; }
+  :root[data-theme="soft"] :is(button, a.btn, input, select, textarea, summary, .stat):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :root[data-theme="soft"] header { background: var(--bg); border-bottom-color: transparent; }
+  :root[data-theme="soft"] header .brand svg { filter: none; }
+  :root[data-theme="soft"] .stat { background: var(--panel); border-color: transparent; }
   :root[data-theme="dusk"] { --bg: #171221; --panel: #211a31; --panel-2: #2b2240; --line: #3d3157; --text: #f3ecff; --muted: #a899c4;
     --accent: #ffb86b; --good: #7ee0b0; --warn: #ffd27a; --hot: #ff7a93; --map-bg: #2a2147; --thumb-bg: #1d1630; }
   * { box-sizing: border-box; }
@@ -38,7 +52,7 @@
 
   @keyframes blink { 50% { opacity: .2; } }
 
-  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: .2px; }
   .brand svg { color: var(--accent); }
   .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -65,7 +79,7 @@
   .layers-pop h5:first-child { margin-top: 0; }
   .layers-pop label.chk { color: var(--text); }
   .layers-pop label.chk:has(select) { justify-content: space-between; }
-  .ctl input[type=range] { accent-color: var(--accent); width: 120px; }
+  .ctl input[type=range] { accent-color: var(--accent); width: 90px; }
   .ctl b { color: var(--text); font-family: var(--mono); min-width: 44px; display: inline-block; }
   button { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
   button:hover, a.btn:hover { border-color: var(--accent); }
@@ -279,10 +293,33 @@
 
   /* Map bits */
   .leaflet-container { font-family: Inter, system-ui, sans-serif; }
+  .map-dim1 { filter: brightness(.7); } .map-dim2 { filter: brightness(.42); } /* Dark, dimmer and Dark, darkest */
   .osm-dim { filter: brightness(.62) saturate(.8); } /* the OpenStreetMap style, dimmed so planes stand out */
   .plane { transition: transform .9s linear; }
-  .plane svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
-  .plane .tag { position: absolute; left: 22px; top: -2px; font: 600 10px var(--mono); color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+  .plane svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); scale: var(--map-icon, 1); }
+  .plane.out svg { scale: calc(.72 * var(--map-icon, 1)); }
+  /* ⚙ map settings (text and icon size): the tags move out with a bigger icon */
+  .leaflet-bar.cog-ctl { overflow: visible !important; } /* the panel opens outside the button */
+  .cog-ctl > a { border-radius: 10px; }
+  .kind-bar { position: absolute; top: 10px; left: 50%; translate: -50% 0; z-index: 800; display: flex; gap: 4px; padding: 4px; background: color-mix(in srgb, var(--panel) 90%, transparent); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+  .kind-bar button { border-radius: 999px; padding: 4px 12px; font-size: 12px; border-color: transparent; background: transparent; color: var(--muted); }
+  .kind-bar .kind-btns { display: flex; gap: 4px; }
+  .kind-bar.collapsed .kind-btns, .kind-bar:not(.collapsed) .kind-show { display: none; }
+  .kind-bar button.kind-x { padding: 4px 8px; color: var(--muted); }
+  .kind-bar button.on { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .map-cog { position: absolute; left: 40px; top: 0; width: 210px; padding: 10px 12px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.45); font: 12px Inter, sans-serif; cursor: default; }
+  .map-cog[hidden] { display: none; }
+  .artcc-lbl { white-space: nowrap; font: 600 11px var(--mono); color: #8fc7ee; text-shadow: 0 0 3px #000, 0 0 3px #000; transform: translate(-50%, -50%); pointer-events: none; }
+  .map-cog label { display: block; margin: 6px 0 2px; color: var(--muted); }
+  .map-cog input[type=range] { width: 100%; accent-color: var(--accent); }
+  .map-cog button { margin-top: 8px; width: 100%; }
+  .map-cog select { width: 100%; font: 12px Inter, sans-serif; padding: 5px 6px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; }
+  .plane .tag { position: absolute; left: calc(12px + 12px * var(--map-icon, 1)); top: -3px; font: 600 calc(10px * var(--map-text, 1))/1.3 var(--mono); color: #fff; white-space: nowrap; background: rgba(8,12,22,.72); padding: 1px 5px; border-radius: 4px; } /* shaded box so names read on any map */
+  body.no-labels :is(.plane .tag, .apt span, .ship-tag, .leaflet-shadow-pane) { display: none; } /* 🏷 button: every name off the map */
+  .card .pa { font-size: 12px; color: #c58cff; overflow-wrap: anywhere; }
+  .plane .tag .enh { display: none; }
+  body.enh-labels .plane .tag .enh { display: block; color: #cfe3f5; }
+  .plane .tag small { display: block; font: inherit; } /* second line: the published route, e.g. TPA - EWR */
   .plane .tag em { font-style: normal; font-weight: 700; }
   .plane .logo { position: absolute; left: -24px; top: 3px; width: 20px; height: 20px; padding: 1px; border-radius: 5px; background: #fff; object-fit: contain; box-shadow: 0 1px 3px rgba(0,0,0,.7); }
   .leaflet-tooltip.plane-tip { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 0; box-shadow: 0 6px 24px rgba(0,0,0,.6); width: 240px; white-space: normal; overflow: hidden; }
@@ -349,6 +386,7 @@
   #wall .w-idle { text-align: center; color: #ffb000; margin: auto 0; }
   #wall .w-idle b { display: block; font-size: clamp(50px, 16vw, 280px); text-shadow: 0 0 20px currentColor; }
   #wall .w-idle small { font-size: clamp(14px, 2.6vw, 44px); color: #8fd3ff; }
+  #wall .w-credits { position: absolute; left: 5vw; right: 38vw; bottom: 6vh; z-index: 1; text-align: left; font-size: clamp(9px, .95vw, 16px); color: #ffb00066; line-height: 1.5; }
   #wall .w-foot { position: absolute; left: 5vw; right: 5vw; bottom: 2.5vh; z-index: 1; display: flex; justify-content: space-between; font-size: clamp(11px, 1.3vw, 22px); color: #ffb00099; }
   #wall .w-x { position: absolute; top: 2vh; right: 2vw; z-index: 2; background: #1a1200; color: #ffb000; border: 1px solid #ffb00066; border-radius: 10px; padding: 8px 14px; font: inherit; font-size: 14px; cursor: pointer; }
   #takeover { position: fixed; inset: 0; z-index: 3000; background: var(--bg); display: none; grid-template-rows: auto 1fr; animation: toIn .35s ease-out; }
@@ -441,8 +479,13 @@
     .to-info { max-height: calc(45vh / var(--ui)); border-left: 0; border-top: 1px solid var(--line); }
     .to-photo { height: 160px; }
   }
+  .fb-float { position: fixed; right: 12px; bottom: 36px; z-index: 1400; font: 600 12px Inter, sans-serif; text-decoration: none; color: var(--on-accent); background: var(--accent); padding: 7px 13px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
+  .fb-float:hover { filter: brightness(1.12); }
   #version { position: fixed; right: 10px; bottom: 6px; z-index: 1500; font: 11px var(--mono); color: var(--muted); background: rgba(11,16,32,.75); padding: 2px 8px; border-radius: 6px; pointer-events: none; }
-  .leaflet-control.zoom-pct { clear: none; margin-left: 6px; padding: 0 8px; height: 30px; line-height: 30px; min-width: 52px; text-align: center;
+  /* the controls down the map's left edge are one tidy column: zoom, zoom level, ruler, home */
+  .leaflet-top.leaflet-left .leaflet-control { margin-left: 10px; margin-top: 6px; }
+  .leaflet-top.leaflet-left .leaflet-control-zoom { margin-top: 10px; }
+  .leaflet-control.zoom-pct { clear: both; padding: 0 3px; height: 26px; line-height: 26px; min-width: 32px; box-sizing: border-box; text-align: center; font-size: 11px;
     background: #fff; color: #333; font: 600 12px var(--mono); cursor: pointer; }
   .leaflet-control.zoom-pct:hover { background: #f4f4f4; }
   #version a { color: var(--accent); text-decoration: none; pointer-events: auto; }
@@ -451,6 +494,7 @@
     border: 1px solid #ffb547; border-radius: 999px; padding: 9px 18px; font: 14px Inter, sans-serif; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.6); }
   #soundLock b { color: #fff; }
   #soundLock[hidden] { display: none; }
+  #stats[hidden], #ships[hidden] { display: none; }
   #toasts { position: fixed; right: 16px; bottom: 32px; display: flex; flex-direction: column; gap: 8px; z-index: 2000; max-width: min(380px, calc(calc(100vw / var(--ui)) - 32px)); }
   .toast { background: var(--panel); border: 1px solid var(--bc); border-left-width: 4px; border-radius: 10px; padding: 10px 14px; font-size: 13px; box-shadow: 0 6px 24px rgba(0,0,0,.5); cursor: pointer; animation: toastIn .25s ease-out; }
   .toast b { color: var(--bc); }
@@ -462,7 +506,9 @@
   .apt i::after { content: ''; width: 2px; height: 70%; background: var(--c); transform: rotate(35deg); border-radius: 1px; }
   .apt.heliport i { border-radius: 3px; }
   .apt.heliport i::after { content: 'H'; width: auto; height: auto; background: none; transform: none; }
-  .apt span { position: absolute; left: calc(var(--s) + 5px); top: 50%; transform: translateY(-50%); font: 600 10px var(--mono); color: var(--c); white-space: nowrap; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+  .apt span { position: absolute; left: calc(var(--s) + 5px); top: 50%; transform: translateY(-50%); font: 600 calc(10px * var(--map-text, 1)) var(--mono); color: var(--c); white-space: nowrap; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+  .leaflet-tooltip.crumb-tip { background: rgba(8,12,22,.82); color: #fff; border: 0; border-radius: 6px; padding: 2px 6px; font: 600 10px/1.35 var(--mono); box-shadow: none; }
+  .leaflet-tooltip.crumb-tip::before { display: none; }
   .leaflet-tooltip.apt-tip { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
   .leaflet-tooltip.apt-tip::before { display: none; }
   .apt-tip b { display: block; font-size: 13px; }
@@ -622,7 +668,7 @@
   #atc .atc-quick a:hover { background: rgba(104,211,145,.12); }
   /* ships */
   .ship svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
-  .ship .ship-tag { position: absolute; left: 36px; top: 8px; font: 700 11px var(--mono); color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+  .ship .ship-tag { position: absolute; left: 36px; top: 8px; font: 700 calc(11px * var(--map-text, 1)) var(--mono); color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
   .ship-pop .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 0; }
   .ship-pop .leaflet-popup-content { margin: 0; width: 240px !important; }
   .ship-pop .leaflet-popup-tip { background: var(--panel); }
@@ -662,12 +708,13 @@
   .ship.last-seen .ship-tag { color: #cfd6e6; font-weight: 600; }
   dialog.set-dlg .line-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
   dialog.set-dlg .line-grid label.chk { font-size: 12.5px; }
-  .jump-box { width: 270px; }
+  .jump-box { position: relative; flex: 0 1 200px; min-width: 110px; }
+  .ctl-l { display: none; } /* the slider's tooltip says what it is: room for the search box */ /* in the top bar, between the name and the buttons */
   .jump-box input { width: 100%; font: 13px Inter, sans-serif; color: var(--text); background: color-mix(in srgb, var(--panel) 95%, transparent); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.5); }
   .jump-box input:focus { outline: none; border-color: var(--accent); }
   .jump-results { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
   .jump-results:empty { display: none; }
-  .jump-results { max-height: calc(60vh / var(--ui)); overflow-y: auto; }
+  .jump-results { position: absolute; top: 100%; left: 0; width: 100%; min-width: 280px; z-index: 2000; max-height: calc(60vh / var(--ui)); overflow-y: auto; }
   .jump-results button.info { cursor: default; color: var(--muted); }
   .jump-results button { text-align: left; background: color-mix(in srgb, var(--panel) 97%, transparent); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 7px 9px; font: 12.5px Inter, sans-serif; cursor: pointer; }
   .jump-results button:hover { border-color: var(--accent); }
@@ -675,7 +722,7 @@
   .jump-results .msg.err { color: #ffb547; }
   .jump-results .msg a { color: var(--accent); }
   .jump-results .msg b { color: var(--text); }
-  @media (max-width: 700px) { .jump-box { width: 190px; } }
+  @media (max-width: 700px) { .jump-box { flex-basis: 100%; max-width: none; order: 5; } }
   .explore-bar button { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 999px; padding: 4px 10px; font: 700 12px Inter, sans-serif; cursor: pointer; }
   .ship .ship-logo { position: absolute; left: -26px; top: 7px; width: 22px; height: 22px; padding: 1px; border-radius: 5px; background: #fff; object-fit: contain; box-shadow: 0 1px 3px rgba(0,0,0,.7); }
   .ship-logo-lg { width: 30px; height: 30px; padding: 2px; border-radius: 6px; background: #fff; object-fit: contain; flex: none; }
@@ -729,12 +776,34 @@
   .fb-share:hover { background: #166fe5; border-color: #fff3; }
   .fb-share.big { font-size: 14px; padding: 8px 14px; border-radius: 10px; }
   /* fits the window: the content scrolls, the Close bar stays pinned at the bottom */
-  dialog.reg-dlg { width: min(560px, calc(94vw / var(--ui))); max-height: calc(92vh / var(--ui)); padding: 0; overflow: hidden; }
+  dialog.reg-dlg { width: min(980px, calc(96vw / var(--ui))); max-height: calc(92vh / var(--ui)); padding: 0; overflow: hidden; }
   dialog.reg-dlg[open] { display: flex; flex-direction: column; }
   dialog.reg-dlg #regBody { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
   dialog.reg-dlg .acts { flex: none; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--panel); }
   dialog.reg-dlg .rg-x { position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,.6); border-color: rgba(255,255,255,.25); padding: 4px 10px; }
-  .rg-photo { height: 180px; background: var(--thumb-bg) center/cover no-repeat; }
+  .rg-photo { height: 340px; background: var(--thumb-bg) center/cover no-repeat; }
+  /* the top of the plane's panel: the photo on the left, the flight path as a technical scope on the right */
+  .rg-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); border-bottom: 1px solid var(--line); }
+  .rg-hero.nophoto { grid-template-columns: minmax(0, 1fr); }
+  .rg-mapbox { position: relative; min-height: 340px; background: var(--map-bg); border-left: 1px solid var(--line); font-family: var(--mono); }
+  .rg-hero.nophoto .rg-mapbox { border-left: 0; }
+  .rg-mapbox .rg-map { position: absolute; inset: 0; height: auto; border: 0; border-radius: 0; filter: brightness(.8) saturate(.9); }
+  .rg-grat { position: absolute; inset: 0; z-index: 500; pointer-events: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 60px rgba(0,0,0,.45);
+    background: linear-gradient(color-mix(in srgb, var(--accent) 13%, transparent) 1px, transparent 1px) 0 0 / 48px 48px, linear-gradient(90deg, color-mix(in srgb, var(--accent) 13%, transparent) 1px, transparent 1px) 0 0 / 48px 48px; }
+  .rg-grat::before, .rg-grat::after { content: ''; position: absolute; width: 16px; height: 16px; border: 0 solid var(--accent); }
+  .rg-grat::before { left: 6px; top: 6px; border-width: 2px 0 0 2px; } .rg-grat::after { right: 6px; bottom: 6px; border-width: 0 2px 2px 0; }
+  .rg-mapbox .leaflet-top.leaflet-left { margin-top: 44px; }
+  .rg-spd { position: absolute; left: 30px; top: 4px; font: 600 11px var(--mono); color: #fff; background: rgba(5,10,14,.82); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  .rg-tag { position: absolute; left: 14px; top: 12px; z-index: 600; font: 600 11px var(--mono); letter-spacing: 1px; color: var(--accent); background: rgba(5,10,14,.78); padding: 4px 9px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 3px; }
+  .rg-tag span { color: var(--muted); margin-left: 8px; letter-spacing: 0; font-weight: 400; }
+  .rg-read { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 600; display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 1px; background: color-mix(in srgb, var(--accent) 30%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 3px; overflow: hidden; }
+  .rg-read div { background: rgba(5,10,14,.85); padding: 4px 8px; min-width: 0; }
+  .rg-read small { display: block; font: 9px var(--mono); letter-spacing: 1px; color: var(--muted); }
+  .rg-read b { display: block; font: 600 13px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rg-scale { position: absolute; right: 12px; top: 56px; bottom: 96px; z-index: 600; display: flex; gap: 5px; font: 9px var(--mono); color: var(--muted); }
+  .rg-scale i { width: 7px; border-radius: 2px; border: 1px solid rgba(255,255,255,.25); }
+  .rg-scale span { display: flex; flex-direction: column; justify-content: space-between; text-align: left; }
+  @media (max-width: 760px) { .rg-hero { grid-template-columns: minmax(0, 1fr); } .rg-photo { height: 200px; } .rg-mapbox { min-height: 300px; border-left: 0; } }
   .rg-head { padding: 16px 20px 4px; }
   .rg-head .t { font: 700 26px var(--mono); }
   .rg-head .s { color: var(--muted); font-size: 14px; margin-top: 2px; }
@@ -742,11 +811,22 @@
   .rg-head .age { font: 600 13px Inter, sans-serif; color: var(--warn); background: rgba(255,181,71,.12); border: 1px solid rgba(255,181,71,.35); border-radius: 999px; padding: 2px 10px; letter-spacing: 0; }
   .rg-sec { padding: 10px 20px; }
   .rg-sec h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+  .credit-grp { margin: 0 0 6px; } .credit-grp summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+  .credit-row { display: flex; gap: 10px; justify-content: space-between; font-size: 12.5px; padding: 3px 0 3px 14px; border-bottom: 1px solid var(--line); }
+  .credit-row a { color: var(--accent); flex: none; } .credit-row span { color: var(--muted); text-align: right; }
+  .go { cursor: pointer; }
+  .go:hover b, span.go:hover { color: var(--accent); text-decoration: underline; }
   .rg-photo { position: relative; }
+  .rg-pn { position: absolute; top: 50%; translate: 0 -50%; width: 34px; height: 54px; padding: 0; font-size: 26px; line-height: 1; color: #fff; background: rgba(5,10,14,.55); border: 0; border-radius: 6px; opacity: 0; transition: opacity .15s; cursor: pointer; }
+  .rg-pn.prev { left: 8px; } .rg-pn.next { right: 8px; }
+  .rg-photo:hover .rg-pn, .rg-pn:focus-visible { opacity: 1; }
+  .rg-dots { position: absolute; left: 0; right: 0; bottom: 30px; display: flex; justify-content: center; gap: 6px; }
+  .rg-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.4); border: 1px solid rgba(0,0,0,.4); cursor: pointer; }
+  .rg-dots i.on { background: #fff; }
   .rg-photo .credit { position: absolute; right: 8px; bottom: 6px; font-size: 10px; color: #fff; background: rgba(0,0,0,.55); padding: 2px 6px; border-radius: 4px; text-decoration: none; }
   .thumb { position: relative; }
   .thumb .stock-tag { position: absolute; left: 3px; bottom: 3px; font: 600 9px Inter, sans-serif; color: #fff; background: rgba(0,0,0,.6); padding: 1px 4px; border-radius: 3px; }
-  .rg-map { height: 260px; border-radius: 10px; border: 1px solid var(--line); background: var(--map-bg); }
+  .rg-map { height: 340px; border-radius: 10px; border: 1px solid var(--line); background: var(--map-bg); }
   .rg-cap { font-size: 11px; color: var(--muted); margin-top: 4px; }
   .rg-owner { font-size: 17px; font-weight: 600; }
   .rg-co { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
@@ -758,13 +838,28 @@
   .rt-bar { flex: 1; position: relative; height: 4px; border-radius: 2px; background: var(--panel-2) !important; padding: 0 !important; }
   .rt-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--accent); }
   .rt-bar span { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 14px; }
-  .rg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .rg-grid div { background: var(--panel-2); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+  .rg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; } /* as many boxes across as fit */
+  .rg-grid > div { background: var(--panel-2); border-radius: 8px; padding: 5px 9px; min-width: 0; } /* only the box itself: the label and value inside it used to get a box of their own too */
+  .rg-grid > div > div { background: none; padding: 0; }
+  /* Route, Right now and More data read as a spec sheet: the name on the left, the value on the right, a thin line between rows, two columns */
+  .rg-grid.rows { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
+  .rg-grid.rows > div { background: none; border-radius: 0; padding: 7px 2px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; }
+  .rg-grid.rows .k { flex: 0 0 auto; font-size: 10.5px; }
+  .rg-grid.rows .v { flex: 1 1 auto; margin: 0; text-align: right; font: 600 13.5px var(--mono); color: var(--text); }
+  .rg-grid.rows .info-txt { flex: 0 0 100%; margin: 4px 0 2px; }
+  .rg-grid.rows > div:has(> .info-txt:not([hidden])) { grid-column: 1 / -1; }
+  .rg-grid.rows .rt-head { padding: 6px 0 14px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: nowrap; align-items: center; }
+  .rg-sec h4 { padding-bottom: 5px; border-bottom: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); margin-bottom: 4px; }
+  .rg-owner { font-size: 20px; letter-spacing: .2px; }
+  .rg-faa { margin-top: 6px; font-size: 12px; color: var(--muted); } .rg-faa button { margin-left: 4px; padding: 3px 10px; font-size: 12px; }
+  @media (max-width: 760px) { .rg-grid.rows { grid-template-columns: minmax(0, 1fr); } }
   .rg-grid .k { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
   .rg-grid .v { font: 13px var(--mono); margin-top: 2px; overflow-wrap: anywhere; }
   /* quick links bar, right under the photo */
   .rg-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 20px; font-size: 13px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
   .rg-links a { color: var(--accent); text-decoration: none; }
+  .rg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; } /* the FAA note sits to the right of the plane's name */
+  .rg-head .rg-ac { flex: 0 1 56%; min-width: 280px; } .rg-head .rg-ac h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
   .rg-src { margin: 4px 20px 12px; font-size: 12px; color: var(--muted); line-height: 1.5; }
   .rg-src.hint { background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 8px; padding: 8px 10px; color: var(--text); }
   .rg-src a { color: var(--accent); }
@@ -849,6 +944,14 @@
     .stat:last-child .s { left: auto; right: 0; translate: 0 0; }
     .stat .k { font-size: 10px; }
     .stat .v, .stat .v.small { font-size: 15px; margin: 0; padding: 0; }
+    /* Big stat cards (Settings > Display, on to start): label on top, a large number, the detail line always showing */
+    body.big-stats .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; padding: 8px 14px; }
+    body.big-stats .stat { display: block; text-align: center; padding: 8px 10px; border-radius: 12px; }
+    body.big-stats .stat:hover, body.big-stats .stat:focus-visible { transform: translateY(-1px); border-radius: 12px; box-shadow: none; }
+    body.big-stats .stat .k { font-size: 11px; display: block; }
+    body.big-stats .stat .v { font-size: 22px; margin-top: 2px; display: block; overflow: hidden; text-overflow: ellipsis; }
+    body.big-stats .stat .v.small { font-size: 16px; padding-top: 3px; }
+    body.big-stats .stat .s { position: static; translate: none; opacity: 1; padding: 0; border: 0; background: none; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
     main, body.hide-left main, body.hide-right main, body.hide-left.hide-right main { display: block; position: relative; z-index: 0; padding: 0; min-height: 0; }
     #map { position: absolute !important; inset: 0; border: 0; border-radius: 0; min-height: 0; } /* !important: beats the inline position the map library sets when the page starts narrow */
     .left-col, aside { position: absolute; top: 12px; width: 340px; z-index: 1001; }
@@ -881,7 +984,7 @@
   <span class="live" id="live"><i></i><span id="liveTxt">Connecting…</span></span>
   <span class="lan-addr" id="lanAddr" hidden title="Network access is on (Settings → Network): other devices on your network can open the dashboard at these addresses"></span>
   <div class="spacer"></div>
-  <div class="ctl">Tracker Radius <input type="range" id="radius" data-pref="Tracker radius" data-pref-group="Map" data-pref-unit=" mi" min="1" max="57" step="1" value="21"><b id="radiusVal">18 nm</b></div>
+  <div class="ctl"><span class="ctl-l">Radius</span> <input type="range" id="radius" data-pref="Tracker radius" data-pref-group="Map" data-pref-unit=" mi" min="1" max="57" step="1" value="21"><b id="radiusVal">18 nm</b></div>
   <details class="layers-menu" id="layersMenu">
     <summary title="Choose what the map shows">🗺 Map Options <span class="lm-count" id="layersCount"></span></summary>
     <div class="layers-pop">
@@ -890,17 +993,25 @@
       <label class="chk"><input type="checkbox" id="showApts" data-pref="Airports" data-pref-group="Map options" checked> Show Airports</label>
       <label class="chk" title="A dot at each airport's weather station, coloured by flying conditions: green good, blue marginal, red poor, purple very poor"><input type="checkbox" id="metarOn" data-pref="Airport weather" data-pref-group="Map options"> ⛅ Airport Weather</label>
       <label class="chk" title="The FAA's temporary flight restrictions (VIP visits, stadiums, fires...) as red areas"><input type="checkbox" id="tfrOn" data-pref="TFRs" data-pref-group="Map options"> ⛔ TFRs</label>
+      <label class="chk" title="The FAA's Special Use Airspace: restricted, prohibited, warning and alert areas and military operations areas. Not for navigation, and it doesn't show when an area is active."><input type="checkbox" id="suaOn" data-pref="Special Use Airspace" data-pref-group="Map options"> 🛡 Special Use Airspace</label>
+      <label class="chk" title="The outlines of the FAA's air route traffic control centers (Miami Center, Jacksonville Center...): which center is watching the sky over each area"><input type="checkbox" id="artccOn" data-pref="ARTCC boundaries" data-pref-group="Map options"> 🗼 ARTCC boundaries</label>
       <label class="chk" title="Shade the part of the map where it's night right now"><input type="checkbox" id="nightOn" data-pref="Day/Night" data-pref-group="Map options"> 🌙 Day/Night</label>
       <label class="chk" title="Live rain radar on the map (US, refreshes every 5 minutes)"><input type="checkbox" id="wxOn" data-pref="Weather radar" data-pref-group="Map options"> 🌧 Show Weather</label>
+      <label class="chk" title="Live rain radar for the whole world, from RainViewer (coarser than the US radar, refreshes every 5 minutes)"><input type="checkbox" id="wxWorld" data-pref="World rain radar" data-pref-group="Map options"> 🌍 World rain radar</label>
+      <label class="chk" title="Live infrared satellite picture of the clouds over the map, from NOAA (refreshes every 10 minutes)"><input type="checkbox" id="irOn" data-pref="Infrared satellite" data-pref-group="Map options"> 🛰 Infrared satellite</label>
+      <label class="chk" title="Mark planes on the plane-alert list (governments, military, police, medical, historic, odd) as interesting, with what they are"><input type="checkbox" id="paOn" data-pref="Interesting planes" data-pref-group="Map options"> ★ Interesting planes</label>
       <label class="chk" title="A radar beam sweeping round your Tracker Radius"><input type="checkbox" id="sweepOn" data-pref="Radar sweep" data-pref-group="Map options"> 📡 Radar sweep</label>
       <label class="chk" title="Faint lines across the map showing where every plane has flown in the last 15 minutes to 3 hours (you pick how far back in Settings, Display). The arrival and departure paths show up."><input type="checkbox" id="trailsOn" data-pref="Flight history lines" data-pref-group="Map options"> 〰 Flight history</label>
       <label class="chk" title="A short tail behind each plane inside your circle, showing where it has just been (the last few minutes)"><input type="checkbox" id="tailsOn" data-pref="Plane tails" data-pref-group="Map options"> ↝ Plane tails</label>
       <label class="chk" title="Cruise ships and other boats, live (needs a free AISStream.io key in Settings)"><input type="checkbox" id="shipsOn" data-pref="Ships" data-pref-group="Map options"> 🚢 Show Ships</label>
+      <label class="chk" title="Show the FlightAware feeder stats panel on the right of the map (off to start)"><input type="checkbox" id="feederOn" data-pref="Feeder stats panel" data-pref-group="Map options"> 📡 Show Feeder stats</label>
+      <label class="chk" title="Show the Cruise ships panel on the right of the map (off to start). Ships on the map itself are the Show Ships switch above."><input type="checkbox" id="shipsPanelOn" data-pref="Cruise ships panel" data-pref-group="Map options"> 🚢 Show Ships panel</label>
       <h5>Look</h5>
       <label class="chk" title="How the map looks"><span>🌍 Map</span>
         <select id="mapStyleSel" data-pref="Map style" data-pref-group="Map" class="chart-sel" aria-label="Map style">
-          <option value="dark">Dark</option><option value="light">Light</option><option value="streets">Streets</option>
-          <option value="topo">Topographic</option><option value="satellite">Satellite</option><option value="osm">OpenStreetMap</option>
+          <option value="dark">Dark</option><option value="dark_dim">Dark, dimmer</option><option value="dark_darkest">Dark, darkest</option><option value="light">Light</option><option value="streets">Streets</option>
+          <option value="topo">Topographic</option><option value="satellite">Satellite</option><option value="osm">OpenStreetMap</option><option value="ofm_bright">OpenFreeMap Bright</option><option value="ofm_liberty">OpenFreeMap Liberty</option><option value="ofm_positron">OpenFreeMap Positron</option>
+          <option value="ofm_dark">OpenFreeMap Dark</option><option value="ofm_fiord">OpenFreeMap Fiord</option><option value="clouds">Satellite, yesterday's clouds</option>
         </select></label>
       <label class="chk" title="FAA aeronautical charts under the map (US). Not for navigation."><span>🗺 Chart</span>
         <select id="chartSel" data-pref="Aeronautical chart" data-pref-group="Map" class="chart-sel" aria-label="Aeronautical chart">
@@ -919,7 +1030,7 @@
       <label class="chk vol" title="Volume of the chime and the voice"><span aria-hidden="true">🔉</span><input type="range" id="volIn" data-pref="Volume" data-pref-group="Alerts and sound" data-pref-scale="100" data-pref-unit="%" min="0" max="1" step="0.05" aria-label="Volume"><b id="volVal"></b></label>
     </div>
   </details>
-  <button id="wallBtn" type="button" title="Full-screen Flight Wall: the planes near you, one at a time, like an airport board"><span aria-hidden="true">🧱</span><span class="btn-txt"> Flight Wall</span></button>
+  <button id="wallBtn" type="button" title="Flight Wall in its own window (drag it to a second screen, press F for full screen): the planes near you, one at a time, like an airport board"><span aria-hidden="true">🧱</span><span class="btn-txt"> Flight Wall</span></button>
   <button id="homeBtn">⚙<span class="btn-txt"> Settings</span></button>
 </header>
 
@@ -942,7 +1053,7 @@
   <div class="left-col" id="leftCol">
     <button type="button" class="col-toggle" id="leftToggle" title="Hide this column (more room for the map)" aria-label="Hide the left column">◀</button>
     <div id="list"><div class="list-h" id="listH">Aircraft nearby</div><div id="cards"></div></div>
-    <details id="favs" open>
+    <details id="favs">
       <summary class="st-h"><span class="chev">▸</span>⭐ Favorite planes<span class="st-sum" id="favSum"></span></summary>
       <form id="favForm" class="fav-add" autocomplete="off"><input id="favIn" placeholder="Add a tail number, e.g. N1932K" aria-label="Tail number to add to favorites"><button>⭐ Add</button></form>
       <div class="fav-msg" id="favMsg"></div>
@@ -1107,8 +1218,12 @@
         <h4>🎨 Theme</h4>
         <p class="hint">The colours of the dashboard. Changes right away. Daylight also switches the map to the Light style (and the others back to Dark) when the map is on one of those two; other map styles stay as you set them.</p>
         <select id="themeSel" data-pref="Theme" data-pref-group="Display">
-          <option value="midnight">Midnight</option><option value="daylight">Daylight</option><option value="radar">Radar (default)</option><option value="dusk">Dusk</option>
+          <option value="midnight">Midnight</option><option value="daylight">Daylight</option><option value="radar">Radar (default)</option><option value="dusk">Dusk</option><option value="soft">Soft Midnight</option>
         </select>
+      </div>
+      <div class="place">
+        <h4>📊 Stat cards</h4>
+        <label class="chk" title="Show the stats under the top bar as big cards with the detail line. Off: one slim strip of pills."><input type="checkbox" id="bigStats" data-pref="Big stat cards" data-pref-group="Display"> Big stat cards</label>
       </div>
       <div class="place">
         <h4>📏 Units</h4>
@@ -1174,6 +1289,12 @@
         <div class="row"><input id="osSecret" type="password" placeholder="OpenSky client secret" autocomplete="off" spellcheck="false"><button id="osClear" title="Remove the saved client">Remove</button></div>
         <p class="hint">When it is used, your home area (a box around your Tracker Radius) is sent to OpenSky. The client ID and secret stay on this PC (in settings.json).</p>
       </div>
+      <div class="place">
+        <h4>📋 FAA owner records <small>optional</small></h4>
+        <p class="hint">The full FAA record for US planes (co-owners, city and state, serial number, registration dates). The app downloads the registry for you (a small file from GitHub, or the FAA's own 73 MB file) once and keeps it in its own folder. It never updates itself: press the button again whenever you want newer records.</p>
+        <div class="row"><button type="button" id="faaGet" title="Download the FAA aircraft registry into the app's folder and use it for owner records">Download the FAA registry</button></div>
+        <p class="hint" id="faaMsg" style="margin-top:6px"></p>
+      </div>
     </section>
     <section data-pane="feeder" hidden>
       <div class="place">
@@ -1222,8 +1343,9 @@
     <section data-pane="credits" hidden>
       <div class="place">
         <h4>🙏 Credits</h4>
-        <p class="hint">Porch Radar is built on free data and tools from many people and organizations: adsb.fi, Planespotters, Airport-Data.com, OurAirports, the FAA, NOAA, OpenStreetMap, Wikipedia, AISStream, Esri, Leaflet, Kokoro and more.</p>
-        <div class="row"><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar#data-sources-and-credits" target="_blank" rel="noopener">📜 See all the credits on GitHub ↗</a><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar/wiki/Data-Sources-and-Privacy" target="_blank" rel="noopener">Data sources and privacy ↗</a></div>
+        <p class="hint">Porch Radar is built on free data and open tools from many people and organizations. Thank you to every one of them. Each has its own terms, and this project is for personal, non-commercial use.</p>
+        <div id="creditsList"></div>
+        <div class="row"><a class="btn-link" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar#data-sources-and-credits" target="_blank" rel="noopener">📜 The same list on GitHub ↗</a>
       </div>
     </section>
     <section data-pane="reset" hidden>
@@ -1261,7 +1383,8 @@
   <textarea id="fbText" rows="5" maxlength="3000" placeholder="Tell us what you clicked and what happened…"></textarea>
   <div class="fb-foot"><span class="fb-note" id="fbNote">We include the app's build and which options are on, not your address.</span><button type="button" id="fbCopy" class="fb-secondary">Copy</button><button type="button" id="fbSend" class="fb-send">Send</button></div>
 </section>
-<div id="version"><span id="verText" title="Version and build number"></span><a id="verCode" target="_blank" rel="noopener" hidden></a> · <a href="#" id="verUpdate" title="Check GitHub for a newer build and install it">⬆ Update now</a> · <a href="https://flighttracker.loves3d.com" target="_blank" rel="noopener" title="The Porch Radar website">Website ↗</a> · <a id="verWiki" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar/wiki" target="_blank" rel="noopener" title="How every feature works">Wiki ↗</a> · <a id="verRepo" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar" target="_blank" rel="noopener" title="Source code and releases on GitHub">GitHub ↗</a></div>
+<a id="fbFloat" class="fb-float" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar/issues/new" target="_blank" rel="noopener" title="Report a problem or suggest an idea: opens a pre-filled page on GitHub (nothing is sent until you press Submit there)">💬 Feedback</a>
+<div id="version"><span id="verText" title="Version and build number"></span><a id="verCode" target="_blank" rel="noopener" hidden></a> · <a href="#" id="verUpdate" title="Check GitHub for a newer build and install it">⬆ Update now</a> · <a href="https://flighttracker.loves3d.com" target="_blank" rel="noopener" title="The Porch Radar website">Website ↗</a> · <a id="verWiki" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar/wiki" target="_blank" rel="noopener" title="How every feature works">Wiki ↗</a> · <a href="https://github.com/krabbzdev/KrabbzDev-PorchRadar/blob/main/PRIVACY.md" target="_blank" rel="noopener" title="What stays on your PC and what is sent to other services">Privacy ↗</a> · <a id="verRepo" href="https://github.com/krabbzdev/KrabbzDev-PorchRadar" target="_blank" rel="noopener" title="Source code and releases on GitHub">GitHub ↗</a></div>
 
 <dialog id="axDlg" class="ax-dlg">
   <div class="ax-bar">
@@ -1282,6 +1405,7 @@
 <div id="wall" role="dialog" aria-label="Flight Wall" aria-live="off">
   <button type="button" class="w-x" id="wallClose" title="Close the Flight Wall (or press Esc)">✕ Close</button>
   <div id="wallBody"></div>
+  <div class="w-credits" id="wallCredits"></div>
   <div class="w-foot"><span id="wallCount"></span><span>Click for the next plane · Esc to close</span></div>
 </div>
 
@@ -1301,6 +1425,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const DEMO = new URLSearchParams(location.search).has('demo');
+const WALLWIN = new URLSearchParams(location.search).has('wall'); // this page is the Flight Wall's own window
 // Text from outside feeds must never become HTML. Every answer from the app passes through here before the page
 // uses it: < > " and ` are swapped for look-alikes and script-style links are dropped, so no value can open a tag,
 // close an attribute or run as a link. esc() at each spot stays as a second layer.
@@ -1359,11 +1484,11 @@ function save(k, v) {
 }
 // Map layers: whatever you pick in 🗺 Map Options sticks. (They used to be switched off once here; that reset is gone so the starting choices below apply.)
 save('skyLayersOff1', true);
-// Ships are on by default now: switch them on once in browsers that had them off, then your choice sticks.
-if (!load('skyShipsOn1', false)) { save('skyShips', true); save('skyShipsOn1', true); }
+// Ships are off by default: switch them off once in browsers that had them on, then your choice sticks.
+if (!load('skyShipsOff1', false)) { save('skyShips', false); save('skyShipsOff1', true); }
 if (!load('skyShowAllOn1', false)) { save('skyShowAll', true); save('skyShowAllOn1', true); } // same for "Show outside radius"
 // theme: set before the page paints; the map follows only when it is on the plain Dark/Light styles
-const THEMES = ['midnight', 'daylight', 'radar', 'dusk'];
+const THEMES = ['midnight', 'daylight', 'radar', 'dusk', 'soft'];
 function setTheme(name, fromUser) {
   if (!THEMES.includes(name)) name = 'radar';
   document.documentElement.dataset.theme = name; save('skyTheme', name); $('themeSel').value = name;
@@ -1374,9 +1499,14 @@ document.documentElement.dataset.theme = THEMES.includes(load('skyTheme', 'radar
 $('themeSel').value = document.documentElement.dataset.theme;
 $('themeSel').addEventListener('change', e => setTheme(e.target.value, true));
 let home = null; // comes from the app's settings (see init)
+let paOn = load('skyPlaneAlert', true); // ★ Interesting planes (Map Options): planes on the plane-alert list count as interesting, or military
 let radius = +load('skyRadius', 21) || 21; // 21 miles = 18 nautical miles
 let showAll = load('skyShowAll', true);
 // UI scale (Settings > Display): CSS zoom on the whole page, remembered per browser
+// Big stat cards (Settings > Display): on to start; off gives the slim strip of pills
+const setBigStats = on => { document.body.classList.toggle('big-stats', on); save('skyBigStats', on); $('bigStats').checked = on; };
+setBigStats(load('skyBigStats', true));
+$('bigStats').addEventListener('change', e => { setBigStats(e.target.checked); map.invalidateSize(); }); // the map's box changed height
 let uiScale = load('skyUiScale', 1);
 // --ui lets the CSS divide window-relative sizes (vh/vw) by the zoom, so the page still fills the window
 const applyUiScale = () => { const r = document.documentElement; r.style.zoom = uiScale; r.style.setProperty('--ui', uiScale); };
@@ -1523,18 +1653,51 @@ const MAP_STYLES = { // value: [background, place names or null]
   streets: ['World_Street_Map', null],
   topo: ['World_Topo_Map', null],
   satellite: ['World_Imagery', 'Reference/World_Boundaries_and_Places'],
-  osm: [null, null], // OpenStreetMap's own tiles, not Esri
+  dark_dim: ['Canvas/World_Dark_Gray_Base', 'Canvas/World_Dark_Gray_Reference'], dark_darkest: ['Canvas/World_Dark_Gray_Base', 'Canvas/World_Dark_Gray_Reference'], // Esri Dark, dimmed: see MAP_DIM
+  osm: [null, null], clouds: [null, null], // not Esri: see OTHER_MAPS
+  ofm_bright: [null, null], ofm_liberty: [null, null], ofm_positron: [null, null], ofm_dark: [null, null], ofm_fiord: [null, null], // OpenFreeMap: see OFM_STYLES
 };
+// Map styles from other providers: value -> [tile address, Leaflet options]
+const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const OTHER_MAPS = {
+  osm: () => ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 16, className: 'osm-dim', attribution: OSM_CREDIT }],
+  // NASA's satellite picture of yesterday (UTC), clouds and all: today's is only part-way round the world
+  clouds: () => ['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/' + new Date(Date.now() - 864e5).toISOString().slice(0, 10) + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',
+    { maxNativeZoom: 9, maxZoom: 16, attribution: 'Imagery: NASA GIBS, VIIRS NOAA-20' }],
+};
+const MAP_DIM = { dark_dim: 'map-dim1', dark_darkest: 'map-dim2' }; // CSS class that darkens the map tiles
 const esriTiles = (svc, opts) => L.tileLayer(ESRI_MAPS + svc + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, ...opts });
-let baseLayer = null, placeNames = null;
+// OpenFreeMap (free, no key) draws vector maps, which need MapLibre GL. It is only downloaded (from cdnjs and jsDelivr)
+// the first time one of these styles is picked, so the other styles never load it.
+const OFM_STYLES = { ofm_bright: 'bright', ofm_liberty: 'liberty', ofm_positron: 'positron', ofm_dark: 'dark', ofm_fiord: 'fiord' };
+let mapGl = null;
+function loadMapGl() {
+  const add = (tag, attrs) => new Promise((ok, no) => { const el = Object.assign(document.createElement(tag), attrs, { onload: ok, onerror: no }); document.head.appendChild(el); });
+  return mapGl ||= (async () => {
+    add('link', { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.css' });
+    await add('script', { src: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js' });
+    await add('script', { src: 'https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js' });
+  })().catch(e => { mapGl = null; throw e; });
+}
+let baseLayer = null, placeNames = null, styleTurn = 0;
 function setMapStyle(name) {
   if (!MAP_STYLES[name]) name = 'dark';
   save('skyMapStyle', name); $('mapStyleSel').value = name;
+  const cogMap = $('cogMap'); if (cogMap) cogMap.value = name; // the same choice in the map's ⚙ panel
+  const turn = ++styleTurn; // a slow download must not land after a newer pick
   if (baseLayer) map.removeLayer(baseLayer);
   if (placeNames) map.removeLayer(placeNames);
+  if (OFM_STYLES[name]) {
+    baseLayer = placeNames = null;
+    loadMapGl().then(() => {
+      if (turn !== styleTurn) return;
+      baseLayer = L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/' + OFM_STYLES[name],
+        attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+    }).catch(() => { if (turn === styleTurn) setMapStyle('dark'); }); // offline or blocked: back to the usual map
+    return;
+  }
   const [base, names] = MAP_STYLES[name];
-  baseLayer = (base ? esriTiles(base, { attribution: 'Tiles &copy; Esri' })
-    : L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'osm-dim', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' })).addTo(map);
+  baseLayer = (base ? esriTiles(base, { attribution: 'Tiles &copy; Esri', className: MAP_DIM[name] || '' }) : L.tileLayer(...OTHER_MAPS[name]())).addTo(map);
   placeNames = names ? esriTiles(names, { pane: 'shadowPane' }) : null;
   if (placeNames && !chartLayer) placeNames.addTo(map); // a chart has its own place names
 }
@@ -1592,6 +1755,37 @@ function setWeather(on) {
 }
 $('wxOn').addEventListener('change', e => setWeather(e.target.checked));
 setWeather(wxOn);
+// World rain radar (RainViewer): its list of radar pictures says where the newest one is; tiles stop at zoom 7.
+const rvLayer = L.tileLayer('', { pane: 'weather', opacity: .6, maxNativeZoom: 7, maxZoom: 16, attribution: 'Radar: <a href="https://www.rainviewer.com">RainViewer</a>' });
+let rvOn = load('skyWorldRain', false), rvTimer = null;
+async function rvRefresh() {
+  try {
+    const j = await fetch('https://api.rainviewer.com/public/weather-maps.json').then(r => r.json());
+    const last = j.radar.past[j.radar.past.length - 1];
+    rvLayer.setUrl(j.host + last.path + '/256/{z}/{x}/{y}/2/1_1.png');
+    if (rvOn) rvLayer.addTo(map);
+  } catch (e) {} // no radar this time: the map stays as it is and the next refresh tries again
+}
+function setWorldRain(on) {
+  rvOn = on; save('skyWorldRain', on); $('wxWorld').checked = on;
+  clearInterval(rvTimer);
+  if (on) { rvRefresh(); rvTimer = setInterval(rvRefresh, 300000); } else map.removeLayer(rvLayer);
+}
+$('wxWorld').addEventListener('change', e => setWorldRain(e.target.checked));
+setWorldRain(rvOn);
+// Infrared satellite (NOAA nowCOAST, global longwave imagery): a picture of the cloud tops that works day and night
+const irLayer = L.tileLayer.wms('https://nowcoast.noaa.gov/geoserver/satellite/wms', { layers: 'global_longwave_imagery_mosaic', format: 'image/png', transparent: true, version: '1.3.0',
+  pane: 'weather', opacity: .6, maxZoom: 16, attribution: 'Satellite: <a href="https://nowcoast.noaa.gov">NOAA nowCOAST</a>' });
+let irOn = load('skyInfrared', false), irTimer = null;
+function setInfrared(on) {
+  irOn = on; save('skyInfrared', on); $('irOn').checked = on;
+  clearInterval(irTimer);
+  if (on) { irLayer.addTo(map); irTimer = setInterval(() => irLayer.redraw(), 600000); } else map.removeLayer(irLayer);
+}
+$('irOn').addEventListener('change', e => setInfrared(e.target.checked));
+setInfrared(irOn);
+$('paOn').checked = paOn;
+$('paOn').addEventListener('change', e => { paOn = e.target.checked; save('skyPlaneAlert', paOn); update(rawCache()); });
 map.createPane('airports').style.zIndex = 450; // above rings and trails, below planes
 const airportLayer = L.layerGroup().addTo(map);
 const ringLayer = L.layerGroup().addTo(map);
@@ -1795,6 +1989,49 @@ $('tfrOn').addEventListener('change', e => { tfrOn = e.target.checked; save('sky
 setTimeout(loadTfrs, 2000);
 setInterval(loadTfrs, 10 * 60e3);
 
+// ---------- Airspace outlines: Special Use Airspace (🛡) and ARTCC boundaries (🗼), from the FAA, off to start ----------
+map.createPane('airspace').style.zIndex = 375; // with the TFRs: over charts and radar, under airports and planes
+const airRenderer = L.canvas({ pane: 'airspace' }); // a thousand outlines: drawn on one canvas
+const suaLayer = L.layerGroup(), artccLayer = L.layerGroup();
+let suaOn = load('skySua', false), artccOn = load('skyArtcc', false), airspaceData = null, airspaceWait = null;
+$('suaOn').checked = suaOn; $('artccOn').checked = artccOn;
+const SUA = { R: ['Restricted', '#ff3b5c'], P: ['Prohibited', '#d6204a'], W: ['Warning', '#ffb547'], MOA: ['Military operations area', '#c58cff'], A: ['Alert', '#ffd27a'], D: ['Danger', '#ff8a5c'] };
+const suaAlt = (v, u) => v == null || v === '' ? '' : /^\d+$/.test(v) ? (+v).toLocaleString() + ' ' + (u === 'FT' ? 'ft' : u || '') : v + (u && u !== 'FT' ? ' ' + u : '');
+function drawAirspace() {
+  suaLayer.clearLayers(); artccLayer.clearLayers(); map.removeLayer(suaLayer); map.removeLayer(artccLayer);
+  if (!airspaceData?.sua) return;
+  if (suaOn) {
+    L.geoJSON(airspaceData.sua, { renderer: airRenderer, style: f => { const c = (SUA[f.properties.TYPE_CODE] || ['', '#ffb547'])[1]; return { color: c, weight: 1.2, fillColor: c, fillOpacity: .08 }; },
+      onEachFeature: (f, l) => {
+        const p = f.properties, kind = (SUA[p.TYPE_CODE] || [p.TYPE_CODE])[0];
+        l.bindTooltip(`<b>${esc(p.NAME || '')}</b><small>${esc(kind)} · ${esc(suaAlt(p.LOWER_VAL, p.LOWER_UOM) || 'surface')} to ${esc(suaAlt(p.UPPER_VAL, p.UPPER_UOM) || '?')}</small>${p.TIMESOFUSE && p.TIMESOFUSE.length < 70 ? `<small>${esc(p.TIMESOFUSE)}</small>` : ''}<small>May not be active · not for navigation</small>`, { className: 'apt-tip', sticky: true });
+      } }).addTo(suaLayer);
+    suaLayer.addTo(map);
+  }
+  if (artccOn) {
+    L.geoJSON(airspaceData.artcc, { renderer: airRenderer, style: { color: '#8fc7ee', weight: 1.5, dashArray: '8 6', fill: false },
+      onEachFeature: (f, l) => {
+        const nm = esc((f.properties.NAME || '').trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase())), id = esc(f.properties.IDENT || '');
+        l.bindTooltip(`<b>${id} · ${nm} Center</b><small>Air route traffic control center</small>`, { className: 'apt-tip', sticky: true });
+        const c = l.getBounds().getCenter(); // a name where the center's area is
+        L.marker(c, { interactive: false, icon: L.divIcon({ className: 'artcc-lbl', html: `${id} ${nm}`, iconSize: [0, 0] }) }).addTo(artccLayer);
+      } }).addTo(artccLayer);
+    artccLayer.addTo(map);
+  }
+}
+async function loadAirspace() {
+  clearTimeout(airspaceWait);
+  if (!suaOn && !artccOn) return drawAirspace();
+  if (!airspaceData) {
+    try { airspaceData = await fetch('/api/airspace').then(r => r.json()); } catch (e) { airspaceData = null; }
+    if (!airspaceData?.sua) { airspaceData = null; airspaceWait = setTimeout(loadAirspace, 30000); return; } // the app is still downloading it: look again in half a minute
+  }
+  drawAirspace();
+}
+$('suaOn').addEventListener('change', e => { suaOn = e.target.checked; save('skySua', suaOn); loadAirspace(); });
+$('artccOn').addEventListener('change', e => { artccOn = e.target.checked; save('skyArtcc', artccOn); loadAirspace(); });
+setTimeout(loadAirspace, 2500);
+
 // ---------- the sun: sunrise and sunset times, and where it's night right now ----------
 // The standard astronomical formulas (as used by NOAA's calculator), accurate to a minute or two.
 const SUN_RAD = Math.PI / 180, J1970 = 2440588, J2000 = 2451545, DAY_MS = 864e5;
@@ -1891,6 +2128,120 @@ homeCtl.onAdd = () => {
   return el;
 };
 homeCtl.addTo(map);
+// 🎲 Watch a random plane: pick one of the planes inside the Tracker Radius, open it, and keep the map centred on it
+// until you drag the map or pick something else.
+let watching = null;
+const randomCtl = L.control({ position: 'topleft' });
+randomCtl.onAdd = () => {
+  const el = L.DomUtil.create('div', 'leaflet-bar measure-ctl');
+  el.innerHTML = '<a href="#" role="button" title="Watch a random plane: opens one of the planes near you and follows it on the map">🎲</a>';
+  L.DomEvent.disableClickPropagation(el);
+  el.firstChild.onclick = e => {
+    e.preventDefault();
+    const pool = current.filter(a => a.lat != null && a.lon != null && (a.dist == null || a.dist <= radius) && a.hex !== watching);
+    if (!pool.length) return toast('No planes inside your Tracker Radius to watch right now.', '#8d98b5');
+    const a = pool[Math.floor(Math.random() * pool.length)];
+    watching = a.hex; select(a.hex, true);
+  };
+  return el;
+};
+randomCtl.addTo(map);
+// 🏷 Toggle all labels: plane names, airport codes, ship names and the map's place names, all at once
+const labelsCtl = L.control({ position: 'topleft' });
+labelsCtl.onAdd = () => {
+  const el = L.DomUtil.create('div', 'leaflet-bar measure-ctl');
+  el.innerHTML = '<a href="#" role="button">🏷</a>';
+  L.DomEvent.disableClickPropagation(el);
+  el.firstChild.onclick = e => { e.preventDefault(); setLabels(document.body.classList.contains('no-labels')); };
+  return el;
+};
+labelsCtl.addTo(map);
+// 🅰 Enhanced labels: adds speed, a climb or descent arrow and altitude above each plane's name
+const enhCtl = L.control({ position: 'topleft' });
+enhCtl.onAdd = () => {
+  const el = L.DomUtil.create('div', 'leaflet-bar measure-ctl');
+  el.innerHTML = '<a href="#" role="button">🅰</a>';
+  L.DomEvent.disableClickPropagation(el);
+  el.firstChild.onclick = e => { e.preventDefault(); setEnhLabels(!document.body.classList.contains('enh-labels')); };
+  return el;
+};
+enhCtl.addTo(map);
+// ⚙ Map settings: how big the text and the plane icons are on the map
+const cogCtl = L.control({ position: 'topleft' });
+cogCtl.onAdd = () => {
+  const el = L.DomUtil.create('div', 'leaflet-bar measure-ctl cog-ctl');
+  el.innerHTML = `<a href="#" role="button" title="Map settings: size of the text and the plane icons">⚙</a>
+    <div class="map-cog" hidden>
+      <label for="cogMap">Map</label>
+      <select id="cogMap" title="Which map to draw: the same choice as Map in Settings and Map Options"></select>
+      <label for="textSize">Text size <b id="textSizeV"></b></label>
+      <input type="range" id="textSize" min="0.7" max="2" step="0.1" title="How big the names on the map are">
+      <label for="iconSize">Icon size <b id="iconSizeV"></b></label>
+      <input type="range" id="iconSize" min="0.7" max="2" step="0.1" title="How big the plane icons on the map are">
+      <button type="button" id="cogReset" title="Put the text and icon sizes back to normal">Reset sizes</button>
+      <button type="button" id="cogMore" title="Open Map Options in the top bar: every layer and map switch">More options ▸</button>
+    </div>`;
+  L.DomEvent.disableClickPropagation(el);
+  L.DomEvent.disableScrollPropagation(el);
+  el.firstChild.onclick = e => { e.preventDefault(); el.querySelector('.map-cog').hidden = !el.querySelector('.map-cog').hidden; };
+  return el;
+};
+cogCtl.addTo(map);
+$('cogMap').innerHTML = $('mapStyleSel').innerHTML; $('cogMap').value = $('mapStyleSel').value; // same list as Settings
+$('cogMap').addEventListener('change', e => setMapStyle(e.target.value));
+// Personal / Commercial / Military buttons across the top of the map: each switches that kind of plane on or off
+const KIND_ON = { personal: load('skyKindPersonal', true), commercial: load('skyKindCommercial', true), military: load('skyKindMilitary', true) };
+const planeKind = a => specialOf(a) === 'military' ? 'military' : /^[A-Z]{3}\d/.test(a.flight || '') ? 'commercial' : 'personal'; // an airline code and a number means commercial; the rest is private, small and helicopters
+{
+  const bar = document.createElement('div'); bar.className = 'kind-bar';
+  const btns = document.createElement('span'); btns.className = 'kind-btns'; bar.appendChild(btns);
+  const tips = { personal: 'Show or hide personal planes: private jets, small planes and helicopters', commercial: 'Show or hide commercial planes: airlines and cargo', military: 'Show or hide military planes' };
+  for (const k of ['personal', 'commercial', 'military']) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = k[0].toUpperCase() + k.slice(1); b.title = tips[k]; b.classList.toggle('on', KIND_ON[k]);
+    b.onclick = () => { KIND_ON[k] = !KIND_ON[k]; save('skyKind' + b.textContent, KIND_ON[k]); b.classList.toggle('on', KIND_ON[k]); update(rawCache()); };
+    btns.appendChild(b);
+  }
+  // hide / show: ✕ folds the three buttons away into one small pill (the choices still apply); the pill brings them back
+  const hide = document.createElement('button'); hide.type = 'button'; hide.className = 'kind-x'; hide.textContent = '✕'; hide.title = 'Hide these buttons (the plane choices stay as they are)';
+  const show = document.createElement('button'); show.type = 'button'; show.className = 'kind-show'; show.title = 'Show the Personal, Commercial and Military buttons';
+  const setBar = hidden => { bar.classList.toggle('collapsed', hidden); save('skyKindBarHidden', hidden); const off = Object.values(KIND_ON).filter(v => !v).length; show.textContent = '👁 Planes' + (off ? ` · ${off} hidden` : ''); };
+  hide.onclick = () => setBar(true); show.onclick = () => setBar(false);
+  btns.appendChild(hide); bar.appendChild(show); setBar(load('skyKindBarHidden', false));
+  btns.querySelectorAll('button').forEach(b => { if (b !== hide) b.addEventListener('click', () => setBar(bar.classList.contains('collapsed'))); }); // keeps the pill's "n hidden" right
+  L.DomEvent.disableClickPropagation(bar);
+  map.getContainer().appendChild(bar);
+}
+function setMapSizes(text, icon) {
+  text = Math.min(2, Math.max(0.7, +text || 1)); icon = Math.min(2, Math.max(0.7, +icon || 1));
+  document.documentElement.style.setProperty('--map-text', text); document.documentElement.style.setProperty('--map-icon', icon);
+  save('skyTextSize', text); save('skyIconSize', icon);
+  $('textSize').value = text; $('iconSize').value = icon; $('textSizeV').textContent = Math.round(text * 100) + '%'; $('iconSizeV').textContent = Math.round(icon * 100) + '%';
+}
+const cogInput = () => setMapSizes($('textSize').value, $('iconSize').value);
+$('textSize').addEventListener('input', cogInput); $('iconSize').addEventListener('input', cogInput);
+$('cogReset').addEventListener('click', () => setMapSizes(1, 1));
+$('cogMore').addEventListener('click', e => { // opens the top bar's Map Options menu and puts this panel away
+  e.stopPropagation(); // or the page's "click elsewhere closes the menu" would shut it again at once
+  document.querySelector('.map-cog').hidden = true;
+  const m = $('layersMenu'); m.open = true; m.scrollIntoView({ block: 'nearest' });
+});
+setMapSizes(load('skyTextSize', 1), load('skyIconSize', 1));
+function setEnhLabels(on) {
+  document.body.classList.toggle('enh-labels', on); save('skyEnhLabels', on);
+  const a = enhCtl.getContainer(); a.classList.toggle('on', on); a.firstChild.title = on ? 'Enhanced labels are on: speed and altitude show with each plane name. Click to go back to names only.' : 'Enhanced labels: add speed, climb arrow and altitude to each plane name on the map';
+}
+setEnhLabels(load('skyEnhLabels', false));
+function setLabels(on) {
+  document.body.classList.toggle('no-labels', !on); save('skyLabels', on);
+  const a = labelsCtl.getContainer(); a.classList.toggle('on', !on); a.firstChild.title = on ? 'Hide all labels on the map (plane names, airports, ships, places)' : 'Show all labels on the map again';
+}
+setLabels(load('skyLabels', true));
+map.on('dragstart', () => { watching = null; }); // grabbing the map stops following
+setInterval(() => {
+  const t = watching && tracks.get(watching);
+  if (!t || selected !== watching) { watching = null; return; }
+  map.panTo([t.aircraft.lat, t.aircraft.lon], { animate: true, duration: 1 });
+}, 3000);
 function setMeasuring(on) {
   measuring = on; measureFrom = null; measureLayer.clearLayers();
   measureCtl.getContainer().classList.toggle('on', on);
@@ -2071,6 +2422,7 @@ zoomPct.onAdd = () => {
   return el;
 };
 zoomPct.addTo(map);
+measureCtl.getContainer().before(zoomPct.getContainer()); // zoom level sits right under the +/- buttons
 function showZoomPct() {
   const el = zoomPct.getContainer();
   if (!home) { el.textContent = Math.round(2 ** (map.getZoom() - 11) * 100) + '%'; return; }
@@ -2113,7 +2465,8 @@ const aircraftSvg = (a, color, rot) => (a && isHeli(a) ? heliSvg : a && !isAirli
 // Military / interesting / emergency aircraft
 const EMERGENCY_SQUAWKS = { '7500': 'HIJACK', '7600': 'RADIO FAILURE', '7700': 'EMERGENCY' };
 const emergencyOf = a => a.emergency ? a.emergency.toUpperCase() : EMERGENCY_SQUAWKS[a.squawk] || null;
-const specialOf = a => emergencyOf(a) ? 'emergency' : a.flags & 1 ? 'military' : a.flags & 2 ? 'interesting' : null;
+const specialOf = a => emergencyOf(a) ? 'emergency' : a.flags & 1 ? 'military' : a.flags & 2 ? 'interesting' : paOn && a.pa ? (a.pa[3] === 'Mil' ? 'military' : 'interesting') : null;
+const paLine = a => paOn && a.pa ? [a.pa[0], a.pa[1]].filter(Boolean).join(' · ') : '';
 const SPECIAL = {
   military:    { color: '#9be15d', tag: 'MIL', label: 'MILITARY', icon: '🎖' },
   interesting: { color: '#c58cff', tag: '★', label: 'INTERESTING', icon: '★' },
@@ -2126,7 +2479,12 @@ function planeIcon(a, inside) {
   const show = inside || sp || fav;
   const color = show ? altColor(a.alt) : '#5b6684';
   const name = a.flight || a.reg;
-  const label = show && name ? `<span class="tag">${sp ? `<em style="color:${SPECIAL[sp].color}">${SPECIAL[sp].tag}</em> ` : fav ? '<em style="color:#ffd27a">★</em> ' : ''}${name}</span>` : '';
+  const leg = show && name && publishedLeg(a), code = p => p.label?.match(/\(([A-Z0-9]{3,4})\)$/)?.[1]; // labels end "(TPA)"
+  const route = leg && code(leg.A) && code(leg.B) ? `<small>${code(leg.A)} - ${code(leg.B)}</small>` : '';
+  // the extra first line (speed, climb arrow and altitude) only shows when 🅰 Enhanced labels is on
+  const enh = `<small class="enh">${a.gs != null ? speedTxt(a.gs) + ' ' : ''}${a.vr > 300 ? '▲' : a.vr < -300 ? '▼' : ''}${fmtAlt(a.alt)}</small>`;
+  const airline = show && name && airlineOf(a) ? `<small class="airl">${esc(airlineOf(a))}</small>` : ''; // the airline's name under the callsign; blank when there is none
+  const label = show && name ? `<span class="tag">${enh}${sp ? `<em style="color:${SPECIAL[sp].color}">${SPECIAL[sp].tag}</em> ` : fav ? '<em style="color:#ffd27a">★</em> ' : ''}${name}${airline}${route}</span>` : '';
   const halo = sp ? `<span class="halo" style="--hc:${SPECIAL[sp].color}"></span>` : fav ? '<span class="halo fav" style="--hc:#ffd27a"></span>' : '';
   const logo = show && logoUrl(a) ? `<img class="logo" src="${logoUrl(a)}" alt="" onerror="this.remove()">` : '';
   return L.divIcon({ className: show ? 'plane' : 'plane out', html: halo + logo + aircraftSvg(a, color, a.track || 0) + label, iconSize: [26, 26], iconAnchor: [13, 13] });
@@ -2173,6 +2531,7 @@ function planeTip(a) {
       ${row('Climb', a.vr && Math.abs(a.vr) >= 100 ? fpmTxt(a.vr) : '')}
       ${row('Squawk', squawkTxt(a.squawk))}
       ${row('Status', sp ? SPECIAL[sp].label : '')}
+      ${row('Interesting', paLine(a))}
     </div>
     ${flightStrip(a)}
     <div class="pt-f">Click for full details</div></div>`;
@@ -2194,6 +2553,7 @@ function normalize(raw) {
     emergency: raw.emergency && raw.emergency !== 'none' ? raw.emergency : null,
     firstSeen: raw.first_seen ?? null, isNew: !!raw.nw,
     firstPos: raw.first_pos ?? null,
+    pa: raw.pa || null, // [operator, tags, category, Mil/Civ/Gov/Pol] from the plane-alert list, when the plane is on it
     flags: (raw.dbFlags || 0) & 3, // 1 = military, 2 = interesting; privacy flags (4, 8) deliberately ignored
     year: raw.year || null,
     category: raw.category || '',
@@ -2360,6 +2720,7 @@ function update(list) {
     if (raw.lat == null || raw.lon == null) continue;
     const a = normalize(raw);
     if (a.seenPos > 60) continue;
+    if (!KIND_ON[planeKind(a)] && !emergencyOf(a) && !isHot(a)) continue; // hidden by the Personal / Commercial / Military buttons (emergencies, favorites and Watch list matches always show)
     a.dist = home ? distMi(home, [a.lat, a.lon]) : null;
     a.brg = home ? bearing(home, [a.lat, a.lon]) : null;
     a.inside = home ? a.dist <= radius : true;
@@ -2470,12 +2831,7 @@ function render() {
           <div class="row1"><span class="cs">${a.flight && a.flight !== reg ? a.flight : reg ? tailLink(a.hex, reg) : a.hex.toUpperCase()}</span><span class="reg">${a.flight && reg && reg !== a.flight ? tailLink(a.hex, reg) : ''}</span>${badge}</div>
           <div class="brand-l"><b>${brandOf(a)}</b> ${modelOnly(a)}${airlineOf(a) ? ` <span class="air">· ${airlineOf(a)}</span>` : ''}</div>
           <div class="route ${routeOf(a) ? '' : 'none'}">${routeOf(a) || 'Route not published'}</div>
-          <div class="model">${ownerOf(a) ? 'Owner: ' + ownerOf(a) : 'Owner not listed'}</div>
-          <div class="metrics">
-            ${trackedFor(a) ? `<span title="Time since it was first tracked">⏱ ${trackedFor(a)}</span>` : ''}
-            ${adsbxBtn(a.hex, a.flight || reg, '🌐 ADSBx', 'chip')}
-            ${favBtn(a.hex, reg)}
-          </div>
+          ${paLine(a) ? `<div class="pa" title="On the plane-alert list of interesting planes">★ ${esc(paLine(a))}</div>` : ''}
         </div>
         ${flightStrip(a)}
       </div>`;
@@ -2491,6 +2847,10 @@ let takeoverOn = load('skyTakeover', true);
 $('takeoverOn').checked = takeoverOn;
 $('takeoverOn').addEventListener('change', e => { takeoverOn = e.target.checked; save('skyTakeover', takeoverOn); if (!takeoverOn) closeTakeover(); });
 let toHex = null, toMap = null, toLayers = null, toLeaveTimer = null, toFitted = false, toOpenedAt = 0;
+// While the overhead close-up is open, a marker is dropped on the plane's position every 2 seconds, each with its speed,
+// heading, altitude and position written beside it.
+let toCrumbs = [], toCrumbTimer = null;
+const addCrumb = a => toCrumbs.push({ lat: a.lat, lon: a.lon, gs: a.gs, track: a.track, alt: a.alt, vr: a.vr });
 // hex -> last time it was inside the radius. Each plane gets one takeover/announcement per visit:
 // it's forgotten only after 2 min outside the radius, and kept across page reloads.
 const announced = new Map(load('skyAnnounced', []));
@@ -2547,6 +2907,8 @@ function updateTakeover() {
 
 function openTakeover(a) {
   toHex = a.hex; toFitted = false; toOpenedAt = Date.now();
+  toCrumbs = []; addCrumb(a); clearInterval(toCrumbTimer);
+  toCrumbTimer = setInterval(() => { const p = current.find(x => x.hex === toHex); if (p) { addCrumb(p); drawTakeover(p); } }, 2000);
   announced.set(a.hex, toOpenedAt); save('skyAnnounced', [...announced]);
   $('takeover').classList.add('show');
   if (!toMap) {
@@ -2883,7 +3245,7 @@ function alertSound(hex) {
 
 function closeTakeover() {
   stopSpeech();
-  toHex = null; clearTimeout(toLeaveTimer); toLeaveTimer = null;
+  toHex = null; clearTimeout(toLeaveTimer); toLeaveTimer = null; clearInterval(toCrumbTimer); toCrumbs = [];
   $('takeover').classList.remove('show');
 }
 $('toClose').onclick = () => closeTakeover(true);
@@ -2905,6 +3267,14 @@ function drawTakeover(a) {
   }
   // flown path (solid) and projected path for the next 2 minutes (dashed)
   if (trail.length > 1) L.polyline(trail, { color, weight: 5, opacity: .9, lineCap: 'round' }).addTo(toLayers);
+  // the 2-second markers: speed and heading, altitude with a climb or descent arrow, and the position; labels alternate above and below the path
+  toCrumbs.forEach((c, i) => {
+    if (i === toCrumbs.length - 1) return; // the plane itself is drawn on the newest one
+    const hdg = c.track != null ? String(Math.round(c.track)).padStart(3, '0') + '°' : '—';
+    L.circleMarker([c.lat, c.lon], { radius: 4, color: '#0b1020', weight: 1.5, fillColor: '#fff', fillOpacity: 1 })
+      .bindTooltip(`<b>${c.gs != null ? esc(speedTxt(c.gs)) : '—'} · ${hdg}</b><br>${esc(fmtAlt(c.alt))}${c.vr > 300 ? ' ▲' : c.vr < -300 ? ' ▼' : ''}<br>${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`,
+        { permanent: true, direction: i % 2 ? 'top' : 'bottom', offset: [0, i % 2 ? -5 : 5], className: 'crumb-tip' }).addTo(toLayers);
+  });
   let proj = null;
   if (a.gs && a.track != null) {
     proj = ahead(a, 120);
@@ -3144,6 +3514,31 @@ function ageBadge(year) {
   return `<span class="age" title="Built in ${y}">${age === 0 ? 'Brand new' : age === 1 ? '1 year old' : age + ' years old'}</span>`;
 }
 
+// Click an airport code or the owner's city and state in this panel: the panel closes and the map goes there (the same as typing it in Jump to)
+$('regBody').addEventListener('click', e => {
+  const g = e.target.closest('[data-go]');
+  if (!g) return;
+  $('regDlg').close(); $('jumpIn').value = g.dataset.go; $('jumpIn').closest('form').requestSubmit();
+});
+// Settings > Flights > Download the FAA registry: the app downloads the FAA's registry, files it in its folder and indexes it
+async function faaDownload(btn, msg, done) { // the app downloads the FAA registry, files it in its folder and indexes it; done() runs when it is ready
+  btn.disabled = true;
+  try { const st = await fetch('/api/faa/download', { method: 'POST' }); if (!st.ok) throw 0; } catch (e) { msg.textContent = 'Could not start the download (only the PC running the app can).'; btn.disabled = false; return; }
+  const poll = async () => {
+    const st = await fetch('/api/faa/status').then(r => r.json()).catch(() => null);
+    if (!st) { msg.textContent = 'Lost contact with the app.'; btn.disabled = false; return; }
+    if (st.state === 'downloading') msg.textContent = 'Downloading… ' + (st.total ? Math.round(st.got / st.total * 100) + '%' : Math.round(st.got / 1e6) + ' MB');
+    else if (st.state === 'indexing') msg.textContent = 'Reading the registry…';
+    else if (st.state === 'done') { msg.textContent = 'Done. Owner records now use the FAA registry.'; btn.disabled = false; if (btn.id === 'faaGet') btn.textContent = 'Update now'; done?.(); return; }
+    else if (st.state === 'error') { msg.textContent = st.error + '. You can also download it by hand from the FAA site.'; btn.disabled = false; return; }
+    setTimeout(poll, 1000);
+  };
+  poll();
+}
+$('faaGet').onclick = () => faaDownload($('faaGet'), $('faaMsg'));
+fetch('/api/faa/status').then(r => r.json()).then(st => { if (st.loaded) { $('faaGet').textContent = 'Update now'; $('faaMsg').textContent = 'Installed' + (st.dataDate ? ', with FAA data from ' + new Date(st.dataDate).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) : '') + '.'; } }).catch(() => {});
+let regPhotoKeys = null; // arrow keys move through the open panel's photos
+document.addEventListener('keydown', e => { if (regPhotoKeys && $('regDlg').open) regPhotoKeys(e); });
 async function openReg(hex, reg) {
   $('regBody').innerHTML = `<div class="rg-head"><div class="t">${reg}</div><div class="s">Looking up registration…</div></div>`;
   if (!$('regDlg').open) $('regDlg').showModal();
@@ -3175,31 +3570,57 @@ async function openReg(hex, reg) {
   const src = F
     ? `<div class="rg-src">Source: FAA Aircraft Registry database (file from ${F.fileDate}). Street addresses are intentionally not shown.</div>`
     : isUS && !r.faaLoaded
-      ? `<div class="rg-src hint">Showing owner data from the live feed. For the full FAA record (co-owners, city/state, serial number, registration dates), download <a href="https://registry.faa.gov/database/ReleasableAircraft.zip" target="_blank" rel="noopener">ReleasableAircraft.zip</a> from the FAA (about 60 MB), put it in the app's folder (the one holding its .exe), and restart it. Or use the FAA Registry link below.</div>`
+      ? ''
       : isUS ? `<div class="rg-src">Not found in the FAA file (it may be newly registered or recently changed). Try the FAA Registry link below.</div>`
       : `<div class="rg-src">Non-US registration; the FAA registry only covers N-numbers. Owner shown is from the live feed.</div>`;
   $('regBody').innerHTML = `
-    ${Lk.photo?.src ? `<div class="rg-photo" style="background-image:url('${Lk.photo.src}')">${photoCredit(Lk.photo)}</div>` : ''}
-    <div class="rg-links">${links}</div>
-    <div class="rg-head"><div class="t">${reg}${ageBadge(F?.year || a.year)}</div><div class="s">${[make, model].filter(Boolean).join(' ')}${a.flight && a.flight !== reg ? ' · flying as ' + a.flight : ''}${airlineOf(a) ? ' (' + airlineOf(a) + ')' : ''}</div></div>
-    <div class="rg-sec"><h4>Route</h4><div class="rg-grid" id="rgRoute" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div></div>
-    <div class="rg-sec"><h4>Right now</h4><div class="rg-grid" id="rgLive"></div></div>
-    <div class="rg-sec"><h4>More data</h4><div class="rg-grid" id="rgTech"></div></div>
-    <div class="rg-sec"><h4>Flight path</h4><div id="rgMap" class="rg-map"></div><div class="rg-cap" id="rgCap"></div></div>
-    <div class="rg-sec"><h4>Registered owner${F?.fractional ? ' · fractional ownership' : ''}</h4>
-      <div class="rg-owner">${owner || 'Not listed'}</div>
-      ${coOwners.length ? `<div class="rg-co">Also on the registration: ${coOwners.join(' · ')}</div>` : ''}
-      ${where || F?.registrantType ? `<div class="rg-co">${[F?.registrantType, where].filter(Boolean).join(' · ')}</div>` : ''}
+    <div class="rg-hero ${Lk.photo?.src ? '' : 'nophoto'}">
+      ${Lk.photo?.src ? `<div class="rg-photo" id="rgPhoto" style="background-image:url('${Lk.photo.src}')">${photoCredit(Lk.photo)}${(Lk.photos || []).length > 1
+        ? `<button type="button" class="rg-pn prev" title="Previous photo" aria-label="Previous photo">‹</button><button type="button" class="rg-pn next" title="Next photo" aria-label="Next photo">›</button><div class="rg-dots" id="rgDots">${Lk.photos.map((_, i) => `<i data-i="${i}"></i>`).join('')}</div>` : ''}</div>` : ''}
+      <div class="rg-mapbox"><div id="rgMap" class="rg-map"></div><div class="rg-grat"></div>
+        <div class="rg-tag">FLIGHT PATH<span id="rgCap"></span></div>
+        <div class="rg-scale"><i id="rgLegend"></i><span><b>40k</b><b>30k</b><b>20k</b><b>10k</b><b>0</b></span></div>
+        <div class="rg-read" id="rgRead"></div></div>
     </div>
-    <div class="rg-sec"><h4>Aircraft</h4><div class="rg-grid">
+    <div class="rg-links">${links}</div>
+    <div class="rg-head"><div><div class="t">${reg}${ageBadge(F?.year || a.year)}</div><div class="s">${[make, model].filter(Boolean).join(' ')}${a.flight && a.flight !== reg ? ' · flying as ' + a.flight : ''}${airlineOf(a) ? ' (' + airlineOf(a) + ')' : ''}</div></div>
+      <div class="rg-ac"><h4>Aircraft</h4><div class="rg-grid">
       ${cell('Manufacturer', make)}${cell('Model', model)}${cell('Year built', F?.year || a.year)}
       ${cell('Serial number', F?.serial)}${cell('Seats', F?.seats)}${cell('Engines', F?.engines)}
       ${cell('ICAO hex', hex ? hex.toUpperCase() : '')}${cell('Type code', a.type || i.icao_type)}
-    </div></div>
+    </div></div></div>
+    <div class="rg-sec"><h4>Route</h4><div class="rg-grid rows" id="rgRoute"></div></div>
+    <div class="rg-sec"><h4>Right now</h4><div class="rg-grid rows" id="rgLive"></div></div>
+    <div class="rg-sec"><h4>More data</h4><div class="rg-grid rows" id="rgTech"></div></div>
+    <div class="rg-sec"><h4>Registered owner${F?.fractional ? ' · fractional ownership' : ''}</h4>
+      <div class="rg-owner">${owner || 'Not listed'}</div>
+      ${isUS && !r.faaLoaded && !F ? `<div class="rg-faa">Co-owners, city and state, and registration dates come from the FAA. <button type="button" id="faaGetPanel" title="Download the FAA aircraft registry (about 75 MB, once) into the app's folder and use it for owner records">Get the full FAA record</button> <span id="faaMsgPanel"></span></div>` : ''}
+      ${coOwners.length ? `<div class="rg-co">Also on the registration: ${coOwners.join(' · ')}</div>` : ''}
+      ${where || F?.registrantType ? `<div class="rg-co">${[F?.registrantType, where && F ? `<span class="go" data-go="${esc(where)}" title="Show ${esc(where)} on the map">${esc(where)}</span>` : esc(where)].filter(Boolean).join(' · ')}</div>` : ''}
+    </div>
     ${F ? `<div class="rg-sec"><h4>Registration</h4><div class="rg-grid">
       ${cell('Certificate issued', F.certIssued)}${cell('Airworthiness', F.airworthiness)}${cell('Expires', F.expires)}${cell('Status', F.status)}
     </div></div>` : ''}
     ${src}`;
+  // the photo library: this plane's photos, a click or the mouse wheel on the photo (or the arrow keys) moves through them
+  const faaP = $('faaGetPanel'); // the same download as Settings > Flights; the panel then reloads with the full record
+  if (faaP) faaP.onclick = () => faaDownload(faaP, $('faaMsgPanel'), () => openReg(hex, reg));
+  const pics = Lk.photos || [], pEl = $('rgPhoto');
+  if (pEl && pics.length > 1) {
+    let pi = Math.max(0, pics.findIndex(q => q.src === Lk.photo.src));
+    pics.forEach(q => { new Image().src = q.src; }); // ready before you get to them
+    const showPic = n => {
+      pi = (n + pics.length) % pics.length;
+      pEl.style.backgroundImage = `url('${pics[pi].src}')`;
+      pEl.querySelector('.credit')?.remove(); pEl.insertAdjacentHTML('beforeend', photoCredit(pics[pi]));
+      $('rgDots').querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === pi));
+    };
+    pEl.querySelector('.prev').onclick = () => showPic(pi - 1); pEl.querySelector('.next').onclick = () => showPic(pi + 1);
+    $('rgDots').onclick = e => { const d = e.target.closest('i'); if (d) showPic(+d.dataset.i); };
+    pEl.addEventListener('wheel', e => { e.preventDefault(); showPic(pi + (e.deltaY > 0 ? 1 : -1)); }, { passive: false });
+    regPhotoKeys = e => { if (e.key === 'ArrowRight') showPic(pi + 1); else if (e.key === 'ArrowLeft') showPic(pi - 1); };
+    showPic(pi);
+  } else regPhotoKeys = null;
   startRegMap(hex);
 }
 
@@ -3208,10 +3629,13 @@ let rgMap = null, rgLayers = null, rgTimer = null;
 function startRegMap(hex) {
   if (rgMap) rgMap.remove();
   clearInterval(rgTimer);
-  rgMap = L.map('rgMap', { zoomControl: true, attributionControl: false, scrollWheelZoom: false });
+  rgMap = L.map('rgMap', { zoomControl: false, attributionControl: false, scrollWheelZoom: false, zoomSnap: 0.1 });
+  L.control.zoom({ position: 'topleft' }).addTo(rgMap);
+  $('rgLegend').style.background = 'linear-gradient(to top, ' + [0, 5000, 10000, 20000, 30000, 40000].map((v, i) => altColor(v) + ' ' + i * 20 + '%').join(', ') + ')'; // the altitude colours, low to high
   L.tileLayer(ESRI + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(rgMap);
   L.tileLayer(ESRI + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, pane: 'shadowPane' }).addTo(rgMap);
   rgLayers = L.layerGroup().addTo(rgMap);
+  rgMap.on('zoomend', labelRegDots);
   rgMap.setView(home || [27.95, -82.6], 9);
   drawRegTrack(hex, true);
   rgTimer = setInterval(() => drawRegTrack(hex, false), 5000);
@@ -3238,8 +3662,8 @@ function renderRegLive(hex) {
   const clock = t => t ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null, ae = r.aero;
   // the big header: where from, a progress bar, where to (like Flightradar24's card)
   const flown = r.from && r.to && !r.guessed ? distMi(r.from.pos, [a.lat, a.lon]) : null, pct = flown != null && togo != null ? Math.round(100 * flown / Math.max(1, flown + togo)) : null;
-  const head = r.from && r.to ? `<div class="rt-head" style="grid-column:1/-1"><div><b>${esc(codeOf(r.from))}</b><small>${esc(cityOf(r.from))}</small></div>
-    <div class="rt-bar"><i style="width:${pct ?? 0}%"></i><span style="left:${pct ?? 0}%">✈</span></div><div style="text-align:right"><b>${esc(codeOf(r.to))}</b><small>${esc(cityOf(r.to))}</small></div></div>` : '';
+  const head = r.from && r.to ? `<div class="rt-head" style="grid-column:1/-1"><div class="go" data-go="${esc(codeOf(r.from))}" title="Show ${esc(codeOf(r.from))} on the map"><b>${esc(codeOf(r.from))}</b><small>${esc(cityOf(r.from))}</small></div>
+    <div class="rt-bar"><i style="width:${pct ?? 0}%"></i><span style="left:${pct ?? 0}%">✈</span></div><div class="go" style="text-align:right" data-go="${esc(codeOf(r.to))}" title="Show ${esc(codeOf(r.to))} on the map"><b>${esc(codeOf(r.to))}</b><small>${esc(cityOf(r.to))}</small></div></div>` : '';
   if (rt) rt.innerHTML = r.from || r.to
     ? head + (ae ? cell(ae.outKind, clock(ae.out)) + cell(ae.inKind, clock(ae.in)) + cell('Flight status', ae.status || null) + cell('Flight plan from', 'FlightAware') : '') + (head ? '' : cell('From', r.from?.label || null) + cell('Going to', r.to ? r.to.label + (r.guessed ? ' (likely)' : '') : null))
       + cell('Distance to go', togo != null ? distTxt(togo) : null) + cell('Arrives in about', mins != null ? etaTxt(mins) : null)
@@ -3279,7 +3703,8 @@ async function drawRegTrack(hex, fit) {
   if (pts.length < 2 && t) pts = t.points.map(p => [p[0], p[1], a.alt, 0]); // fall back to what this page has seen
   rgLayers.clearLayers();
   if (home) L.marker(home, { icon: L.divIcon({ className: '', html: '<div style="font-size:16px;transform:translate(-8px,-10px)">🏠</div>', iconSize: [0, 0] }), interactive: false }).addTo(rgLayers);
-  if (!pts.length) { $('rgCap').textContent = 'No flight path recorded yet — it builds up while the plane is in range.'; return; }
+  readRegScope(a, now0(a, pts));
+  if (!pts.length) { $('rgCap').textContent = 'NO PATH YET'; return; }
   // draw runs of the same altitude colour as one line, so long tracks stay light
   let run = [[pts[0][0], pts[0][1]]], col = altColor(pts[0][2]);
   for (let i = 1; i < pts.length; i++) {
@@ -3290,14 +3715,44 @@ async function drawRegTrack(hex, fit) {
       run = [[pts[i][0], pts[i][1]]]; col = c;
     }
   }
+  // a dot every 5 seconds along the path (the server keeps a point that often): hover for its speed, altitude and time, and every sixth one (30 s) is labelled
+  rgDots = [];
+  pts.forEach((q, i) => {
+    if (i === 0 || i === pts.length - 1) return;
+    const txt = `${q[4] != null ? esc(speedTxt(q[4])) + ' · ' : ''}${esc(fmtAlt(q[2]))}${q[3] ? ' · ' + timeOf(q[3]) : ''}`;
+    rgDots.push({ dot: L.circleMarker([q[0], q[1]], { radius: 3, color: '#0b1020', weight: 1, fillColor: altColor(q[2]), fillOpacity: 1 }).addTo(rgLayers), txt });
+  });
   const first = pts[0];
+  labelRegDots();
   L.circleMarker([first[0], first[1]], { radius: 5, color: '#fff', weight: 2, fillColor: altColor(first[2]), fillOpacity: 1 })
     .bindTooltip(`First seen${first[3] ? ' ' + timeOf(first[3]) : ''} · ${fmtAlt(first[2])}`).addTo(rgLayers);
   const now = a ? [a.lat, a.lon] : [pts[pts.length - 1][0], pts[pts.length - 1][1]];
-  L.marker(now, { icon: L.divIcon({ className: '', html: aircraftSvg(a, a ? altColor(a.alt) : '#cfd6e6', a?.track || 0), iconSize: [26, 26], iconAnchor: [13, 13] }) }).addTo(rgLayers);
-  if (fit) rgMap.fitBounds(L.latLngBounds(pts.map(p => [p[0], p[1]]).concat([now])).pad(0.2), { maxZoom: 13 });
+  L.marker(now, { icon: L.divIcon({ className: '', html: `<div style="position:relative">${aircraftSvg(a, a ? altColor(a.alt) : '#cfd6e6', a?.track || 0)}${a?.gs != null ? `<span class="rg-spd">${esc(speedTxt(a.gs))}</span>` : ''}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }) }).addTo(rgLayers);
+  if (fit) { rgMap.fitBounds(L.latLngBounds(pts.map(p => [p[0], p[1]]).concat([now])).pad(0.2), { maxZoom: 13, animate: false }); rgMap.setZoom(rgMap.getZoom() - 0.32, { animate: false }); } // then 20% further out (a factor of 0.8 is 0.32 of a zoom step)
   const mins = first[3] ? Math.round((Date.now() - first[3]) / 60000) : null;
-  $('rgCap').textContent = `Path while in range${mins != null ? ` · last ${mins} min` : ''} · coloured by altitude${a ? ` · now ${fmtAlt(a.alt)}` : ' · no longer in range'}`;
+  $('rgCap').textContent = `${mins != null ? `LAST ${mins} MIN · ` : ''}${pts.length} PTS${a ? '' : ' · OUT OF RANGE'}`;
+}
+// The 5-second dots show their speed, altitude and time on the map itself. Labels that would sit on top of each other are
+// left out (the dot still shows them on hover), and the choice is made again each time the map is zoomed.
+let rgDots = [];
+function labelRegDots() {
+  if (!rgMap) return;
+  let lastP = null, side = 0;
+  for (const d of rgDots) {
+    const p = rgMap.latLngToContainerPoint(d.dot.getLatLng()), show = !lastP || Math.hypot(p.x - lastP.x, p.y - lastP.y) >= 44;
+    d.dot.unbindTooltip();
+    d.dot.bindTooltip(d.txt, { permanent: show, direction: side++ % 2 ? 'left' : 'right', offset: [side % 2 ? -6 : 6, 0], className: 'crumb-tip' });
+    if (show) lastP = p;
+  }
+}
+// the readout along the bottom of the scope: the plane's numbers right now
+const now0 = (a, pts) => a ? [a.lat, a.lon] : pts.length ? [pts[pts.length - 1][0], pts[pts.length - 1][1]] : null;
+function readRegScope(a, pos) {
+  const cell = (k, v) => `<div><small>${k}</small><b>${v}</b></div>`;
+  const vr = a?.vr != null ? (a.vr > 0 ? '+' : '') + Math.round(a.vr) : '—';
+  $('rgRead').innerHTML = !a ? cell('STATUS', 'NO LIVE DATA') + (pos ? cell('LAST POS', pos[0].toFixed(3) + ', ' + pos[1].toFixed(3)) : '') :
+    cell('ALT', fmtAlt(a.alt)) + cell('GS', a.gs != null ? speedTxt(a.gs) : '—') + cell('HDG', a.track != null ? String(Math.round(a.track)).padStart(3, '0') + '°' : '—')
+    + cell('V/S', vr) + cell('RNG', a.dist != null ? distTxt(a.dist) : '—') + cell('POS', pos ? pos[0].toFixed(3) + ', ' + pos[1].toFixed(3) : '—');
 }
 
 // ---------- nearby scrolling alert ----------
@@ -3618,6 +4073,14 @@ $('tdList').addEventListener('click', e => {
 // ---------- FlightAware feeder stats (from your FlightAware stats page, refreshed every 30 min) ----------
 // Panel starts closed; remember if the viewer opens it.
 $('stats').open = load('skyStatsOpen', false);
+// The feeder stats panel is hidden to start; 🗺 Map Options > Show Feeder stats brings it back
+const setFeederPanel = on => { $('stats').hidden = !on; save('skyFeederOn', on); $('feederOn').checked = on; };
+setFeederPanel(load('skyFeederOn', false));
+$('feederOn').addEventListener('change', e => setFeederPanel(e.target.checked));
+// Same for the Cruise ships panel (Show Ships, above, is the ships on the map itself)
+const setShipsPanel = on => { $('ships').hidden = !on; save('skyShipsPanelOn', on); $('shipsPanelOn').checked = on; };
+setShipsPanel(load('skyShipsPanelOn', false));
+$('shipsPanelOn').addEventListener('change', e => setShipsPanel(e.target.checked));
 $('stats').addEventListener('toggle', () => save('skyStatsOpen', $('stats').open));
 let fa = null;
 const faOnline = () => fa?.lastCheckin && Date.now() - fa.lastCheckin < 15 * 60000;
@@ -4015,7 +4478,7 @@ map.createPane('ships').style.zIndex = 440; // above airports' labels area, belo
 const shipLayer = L.layerGroup().addTo(map);
 const shipMarkers = new Map(); // MMSI -> marker
 let shipData = { keySet: false, status: 'off', ships: [] };
-let shipsOn = load('skyShips', true);
+let shipsOn = load('skyShips', false);
 $('shipsOn').checked = shipsOn;
 $('shipsOn').addEventListener('change', e => { shipsOn = e.target.checked; save('skyShips', shipsOn); drawShips(); });
 
@@ -4299,17 +4762,57 @@ function explorePopup(a) {
     `<div class="pt-f">${cs ? `<a href="https://www.flightaware.com/live/flight/${encodeURIComponent(cs)}" target="_blank" rel="noopener">FlightAware ↗</a> · ` : ''}<a href="https://globe.adsbexchange.com/?icao=${a.hex}" target="_blank" rel="noopener">ADS-B Exchange ↗</a></div>`);
 }
 
+// the floating 💬 Feedback button: a new GitHub issue with the build number filled in (nothing is sent until Submit is pressed on GitHub)
+{
+  const b = (VERSION_TEXT => VERSION_TEXT)(($('verText')?.textContent || '').trim());
+  $('fbFloat').href = 'https://github.com/krabbzdev/KrabbzDev-PorchRadar/issues/new?title=' + encodeURIComponent('') + '&body=' + encodeURIComponent(`What happened, or what idea do you have?\n\n\n---\nBuild: ${b || 'unknown'}\n(Security problem? Please don't post details here: report it privately at https://github.com/krabbzdev/KrabbzDev-PorchRadar/security/advisories/new)`);
+}
+
+// ---------- Credits: every data source and tool, shown in Settings > Credits and (short form) along the bottom of the Flight Wall ----------
+const CREDITS = [ // [group, name, what we use it for, link]
+  ['Aircraft and flights', 'adsb.fi', 'live aircraft positions (open data)', 'https://adsb.fi'],
+  ['Aircraft and flights', 'OpenSky Network', 'backup aircraft feed, when you add your own client', 'https://opensky-network.org'],
+  ['Aircraft and flights', 'adsb.lol', 'flight routes', 'https://adsb.lol'],
+  ['Aircraft and flights', 'adsbdb', 'aircraft, owner and route details', 'https://www.adsbdb.com'],
+  ['Aircraft and flights', 'plane-alert-db (SDR-Enthusiasts)', 'the list of interesting planes (Open Database License)', 'https://github.com/sdr-enthusiasts/plane-alert-db'],
+  ['Aircraft and flights', 'FAA Aircraft Registry', 'owner and registration records', 'https://registry.faa.gov'],
+  ['Aircraft and flights', 'FlightAware', 'feeder stats, and optional flight plan data', 'https://www.flightaware.com'],
+  ['Aircraft and flights', 'ADS-B Exchange', 'the plane viewer link', 'https://globe.adsbexchange.com'],
+  ['Photos and logos', 'Planespotters.net', 'aircraft photos (each photographer is credited)', 'https://www.planespotters.net'],
+  ['Photos and logos', 'Airport-Data.com', 'backup aircraft photos', 'https://airport-data.com'],
+  ['Photos and logos', 'Wikipedia', 'model photos and place summaries', 'https://www.wikipedia.org'],
+  ['Photos and logos', 'airline-logos (sexym0nk3y)', 'airline logos, via jsDelivr (trademarks of their airlines)', 'https://github.com/sexym0nk3y/airline-logos'],
+  ['Airports', 'OurAirports', 'airports, runways and radio frequencies (public domain)', 'https://ourairports.com'],
+  ['Airports', 'LiveATC.net', 'listen-to-ATC links', 'https://www.liveatc.net'],
+  ['Maps', 'Esri', 'the map pictures', 'https://www.esri.com'],
+  ['Maps', 'OpenStreetMap contributors', 'the OpenStreetMap map, and address lookup (Nominatim)', 'https://www.openstreetmap.org/copyright'],
+  ['Maps', 'OpenFreeMap and OpenMapTiles', 'the OpenFreeMap vector maps', 'https://openfreemap.org'],
+  ['Maps', 'NASA GIBS', 'the satellite picture with clouds', 'https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api'],
+  ['Weather and airspace', 'NOAA Aviation Weather Center', 'airport weather (METARs)', 'https://aviationweather.gov'],
+  ['Weather and airspace', 'NWS NEXRAD via Iowa Environmental Mesonet', 'US rain radar', 'https://mesonet.agron.iastate.edu'],
+  ['Weather and airspace', 'RainViewer', 'world rain radar', 'https://www.rainviewer.com'],
+  ['Weather and airspace', 'NOAA nowCOAST', 'infrared satellite', 'https://nowcoast.noaa.gov'],
+  ['Weather and airspace', 'FAA', 'aeronautical charts, TFRs, Special Use Airspace and ARTCC boundaries (public domain)', 'https://www.faa.gov/air_traffic/flight_info/aeronav'],
+  ['Ships', 'AISStream.io', 'live ship positions', 'https://aisstream.io'],
+  ['Software we build on', 'Leaflet', 'the maps', 'https://leafletjs.com'],
+  ['Software we build on', 'MapLibre GL JS', 'the OpenFreeMap vector maps', 'https://maplibre.org'],
+  ['Software we build on', 'Kokoro-82M and kokoro-js', 'the optional natural voices (Apache 2.0)', 'https://github.com/hexgrad/kokoro'],
+  ['Software we build on', 'Node.js', 'runs the app', 'https://nodejs.org'],
+  ['Software we build on', 'Inter and JetBrains Mono', 'the fonts, from Google Fonts', 'https://fonts.google.com'],
+  ['Software we build on', 'Inno Setup', 'the Windows installer', 'https://jrsoftware.org/isinfo.php'],
+];
+$('creditsList').innerHTML = [...new Set(CREDITS.map(c => c[0]))].map(g => `<details class="credit-grp"><summary>${esc(g)}</summary>${CREDITS.filter(c => c[0] === g).map(c =>
+  `<div class="credit-row"><a href="${esc(c[3])}" target="_blank" rel="noopener" title="Open ${esc(c[1])}">${esc(c[1])} ↗</a><span>${esc(c[2])}</span></div>`).join('')}</details>`).join('');
+$('wallCredits').textContent = 'Aircraft data: adsb.fi · Photos: Planespotters.net · Logos: airline-logos · Routes: adsb.lol, adsbdb · Airports: OurAirports · Map: Esri, OpenStreetMap · Interesting planes: plane-alert-db · All credits in Settings';
+
 // ---------- Jump to: type a place ("Miami", "NYC", "Nassau") or airport code ("JFK") and the map goes there ----------
 // Exploring then kicks in by itself and loads the live planes and ships around it.
-const jumpBox = L.control({ position: 'topright' });
-jumpBox.onAdd = () => {
-  const el = L.DomUtil.create('div', 'jump-box');
+// (it lives in the top bar, not on the map)
+{
+  const el = document.createElement('div'); el.className = 'jump-box';
   el.innerHTML = `<form autocomplete="off"><input id="jumpIn" type="search" title="Type a place, airport, ship name or tail number and press Enter to find it on the map" placeholder="🔎 Jump to a place, airport, ship or tail number" aria-label="Jump to a place, airport, ship or plane on the map"></form><div class="jump-results" id="jumpResults"></div>`;
-  L.DomEvent.disableClickPropagation(el);
-  L.DomEvent.disableScrollPropagation(el);
-  return el;
-};
-jumpBox.addTo(map);
+  document.querySelector('header .spacer').before(el);
+}
 // Links to sites that also use satellites, for ships beyond AISStream's coastal receivers.
 // (CruiseMapper ship pages have IDs we can't know, so DuckDuckGo's "first result" link lands on the right one.)
 // CruiseMapper (satellite tracking, so ships out at sea too) finds a ship by its IMO number; without one, a search.
@@ -4485,7 +4988,9 @@ $('rightToggle').onclick = () => setColumn('right', !document.body.classList.con
 setColumn('left', load('skyHideleft', false));
 setColumn('right', load('skyHideright', false));
 
-$('favs').open = load('skyFavsOpen', true);
+// closed to start, so the plane list has the room; closed once in browsers that had it open, then your choice sticks
+if (!load('skyFavsClosed1', false)) { save('skyFavsOpen', false); save('skyFavsClosed1', true); }
+$('favs').open = load('skyFavsOpen', false);
 $('favs').addEventListener('toggle', () => save('skyFavsOpen', $('favs').open));
 
 
@@ -4769,15 +5274,27 @@ function openWall() {
 }
 function closeWall() {
   if (!wallOn) return;
+  if (WALLWIN) { window.close(); return; }
   wallOn = false; clearInterval(wallTimer); wallAnim.forEach(clearTimeout); wallSig = '';
   $('wall').classList.remove('show');
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }
-$('wallBtn').addEventListener('click', openWall);
+// The 🧱 button opens the wall in its own window (drag it to a second screen). If the browser blocks the pop-up, it
+// goes full screen in this page instead. The window is this same page with ?wall, so it runs on its own.
+$('wallBtn').addEventListener('click', () => {
+  const w = window.open('/?wall', 'porchRadarWall', 'popup=yes,width=1280,height=720');
+  if (w) w.focus(); else openWall();
+});
 $('wallClose').addEventListener('click', e => { e.stopPropagation(); closeWall(); });
 $('wall').addEventListener('click', () => { wallIdx++; wallSince = Date.now(); drawWall(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && wallOn) closeWall(); });
-document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) closeWall(); }); // leaving full screen closes it
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && wallOn && !WALLWIN) closeWall();
+  if ((e.key === 'f' || e.key === 'F') && WALLWIN) { // in its own window, F toggles full screen
+    if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+});
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && !WALLWIN) closeWall(); }); // leaving full screen closes it
+if (WALLWIN) { document.title = 'Flight Wall · Porch Radar'; openWall(); } // the ?wall window starts on the wall
 
 // ---------- map legend: what the colours and icons mean (🗺 Legend button, bottom left of the map) ----------
 const legend = L.control({ position: 'bottomleft' });
@@ -5165,7 +5682,7 @@ const TIPS = {
   '#radius': 'How far from home to track planes, up to 50 nm. Planes inside this circle are listed, labelled and logged, and the blue circle on the map shows it.',
   '#showAll': 'Also draw planes that are outside your Tracker Radius circle. They appear on the map but are not in the list, the log or the alerts.',
   '#showApts': 'Show airports and heliports on the map as small squares. Click one for its runways, radio frequencies and weather.',
-  '#mapStyleSel': 'How the map looks: Dark, Light, Streets, Topographic, Satellite or OpenStreetMap.',
+  '#mapStyleSel': 'How the map looks: Dark, Light, Streets, Topographic and Satellite from Esri, OpenStreetMap, the five OpenFreeMap styles, or the NASA satellite picture from yesterday with its clouds.',
   '#chartSel': 'Lay an FAA aeronautical chart under the planes (VFR sectional, terminal area, or IFR low or high enroute). US only, and not for navigation.',
   '#homeBtn': 'Open Settings: your home, alerts and voice, display, ships, flights, feeder stats, network, updates and more.',
   // favorites, log, ATC, airport panels
@@ -5219,7 +5736,7 @@ const TIPS = {
   '#voiceTest': 'Say the sentence now with the chosen voice, using an example plane.',
   '#sayReset': 'Put the spoken sentence back to the standard one.',
   '#uiScale': 'Make everything on the page bigger or smaller. Changes right away.',
-  '#themeSel': 'The colors of the dashboard: Midnight, Daylight, Radar or Dusk. Changes right away.',
+  '#themeSel': 'The colors of the dashboard: Midnight, Daylight, Radar, Dusk or Soft Midnight. Changes right away.',
   '#sweepStrIn': 'How strong the turning radar beam looks when Radar sweep is on in Map Options. Lower is fainter.',
   '#trailStrIn': 'How strong the Flight history lines and the Plane tails look. Lower is fainter.',
   '#trailMinsIn': 'How far back the Flight history lines go. The app remembers up to 3 hours, and starts counting again when it restarts.',

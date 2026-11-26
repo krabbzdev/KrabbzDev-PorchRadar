@@ -61,7 +61,7 @@ const lookupCache = new Map(); // hex|callsign -> {photo, info, flight}
 const firstSeen = new Map();   // hex -> {first, last} (ms)
 let speaker = null; // { id, at, score }: the dashboard page that makes the sounds (/api/speaker)
 const posLog = [], POS_LOG_MS = 3 * 3600e3; // [hex, lat, lon, alt, time, label] of every plane for the last 3 hours: map trails and replay
-const trackHist = new Map();   // hex -> [[lat, lon, alt, time], ...] while the aircraft is in range
+const trackHist = new Map();   // hex -> [[lat, lon, alt, time, speed], ...] while the aircraft is in range: a point every 5 seconds
 
 function get(url, timeoutMs = 6000) {
   return new Promise((resolve, reject) => {
@@ -449,6 +449,41 @@ async function artccAt(lat, lon) {
   return list;
 }
 
+// ---------- Airspace outlines: the FAA's Special Use Airspace and ARTCC (air route traffic control center) boundaries ----------
+// One download from the FAA's open data service, simplified and kept in airspace-cache.json for a week. The FAA's service is
+// shared by everyone and limits requests per minute, so the page asks us, never the FAA, and a busy answer just waits a minute.
+const AIRSPACE_FILE = path.join(APP_DIR, 'airspace-cache.json'), FAA_GIS = 'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/';
+let airspaceData = null, airspaceBuilding = false;
+try { airspaceData = JSON.parse(fs.readFileSync(AIRSPACE_FILE, 'utf8')); } catch (e) {}
+async function faaFeatures(service, where, fields) {
+  const q = new URLSearchParams({ where, outFields: fields, outSR: '4326', maxAllowableOffset: '0.01', geometryPrecision: '3', resultRecordCount: '2000', f: 'geojson' });
+  for (let tries = 0; tries < 4; tries++) {
+    const r = await get(FAA_GIS + service + '/FeatureServer/0/query?' + q, 60000);
+    let j = null; try { j = JSON.parse(r.body); } catch (e) {}
+    if (j && Array.isArray(j.features)) return j.features;
+    if (r.status === 429 || j?.error?.code === 429) { await new Promise(ok => setTimeout(ok, 62000)); continue; } // too many requests this minute
+    throw new Error('FAA airspace data unavailable (HTTP ' + r.status + ')');
+  }
+  throw new Error('FAA airspace data is busy');
+}
+async function buildAirspace() {
+  if (airspaceBuilding) return;
+  airspaceBuilding = true;
+  try {
+    const sua = await faaFeatures('Special_Use_Airspace', '1=1', 'NAME,TYPE_CODE,UPPER_VAL,UPPER_UOM,LOWER_VAL,LOWER_UOM,TIMESOFUSE');
+    const artcc = await faaFeatures('Boundary_Airspace', "TYPE_CODE='ARTCC' AND LOCAL_TYPE='ARTCC_H'", 'IDENT,NAME');
+    if (sua.length && artcc.length) {
+      airspaceData = { built: Date.now(), sua: { type: 'FeatureCollection', features: sua }, artcc: { type: 'FeatureCollection', features: artcc } };
+      fs.writeFileSync(AIRSPACE_FILE + '.tmp', JSON.stringify(airspaceData)); fs.renameSync(AIRSPACE_FILE + '.tmp', AIRSPACE_FILE);
+    }
+  } catch (e) { console.log('Airspace outlines: ' + e.message); }
+  airspaceBuilding = false;
+}
+function airspace() { // the page's answer; starts a download when there is none, or when it is over a week old
+  if (!airspaceData || Date.now() - airspaceData.built > 7 * 864e5) buildAirspace();
+  return airspaceData || { building: true };
+}
+
 const airportWikiCache = new Map();
 async function airportWiki(link) {
   const m = String(link).match(/^https?:\/\/([a-z-]+)\.wikipedia\.org\/wiki\/([^?#]+)/);
@@ -539,8 +574,18 @@ async function fetchAircraft() {
       const j = JSON.parse(r.body);
       json = { now: j.now, aircraft: j.aircraft || j.ac || [] };
     } catch (e) {
-      if (!openskyKeySet()) throw e;
-      json = await openskyAircraft(c).catch(e2 => { throw new Error(`${e.message}; OpenSky backup: ${e2.message}`); });
+      // backup 1: adsb.lol, open data in the same format, no account needed (credited on the page as the source)
+      try {
+        const r = await get(`https://api.adsb.lol/v2/point/${c[0].toFixed(4)}/${c[1].toFixed(4)}/${PUBLIC_RADIUS_NM}`, 8000);
+        if (r.status !== 200) throw new Error('HTTP ' + r.status);
+        const j = JSON.parse(r.body);
+        if (!Array.isArray(j.ac)) throw new Error('no aircraft list');
+        json = { now: j.now, aircraft: j.ac, attribution: { name: 'adsb.lol', link: 'https://adsb.lol' } };
+      } catch (e1) {
+        // backup 2: OpenSky, only when the owner has added their own client
+        if (!openskyKeySet()) throw new Error(`${e.message}; adsb.lol backup: ${e1.message}`);
+        json = await openskyAircraft(c).catch(e2 => { throw new Error(`${e.message}; adsb.lol backup: ${e1.message}; OpenSky backup: ${e2.message}`); });
+      }
     }
     lastPublic = { at: Date.now(), json };
   }
@@ -549,6 +594,40 @@ async function fetchAircraft() {
 
 // Polled in the background so "first seen" keeps counting even when no browser is open.
 let latest = null;
+// ---------- Plane-alert list: interesting planes (governments, military, police, medical, historic, odd) ----------
+// sdr-enthusiasts/plane-alert-db, under the Open Database License (credit: SDR-Enthusiasts and contributors). Downloaded
+// from GitHub at most once a day to plane-alert-db.csv next to the app; a failed download keeps the copy already there.
+const PA_URL = 'https://raw.githubusercontent.com/sdr-enthusiasts/plane-alert-db/main/plane-alert-db.csv', PA_FILE = path.join(APP_DIR, 'plane-alert-db.csv');
+let paDb = new Map(); // hex -> [operator, tags, category, kind (Mil, Civ, Gov, Pol)]
+function csvLine(line) { // quoted fields may hold commas
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else q = !q; } else if (c === ',' && !q) { out.push(cur); cur = ''; } else cur += c;
+  }
+  out.push(cur); return out;
+}
+function loadPlaneAlert() {
+  try {
+    const m = new Map(), lines = fs.readFileSync(PA_FILE, 'utf8').split(/\r?\n/);
+    for (let i = 1; i < lines.length; i++) {
+      const f = csvLine(lines[i]), hex = (f[0] || '').toLowerCase();
+      if (/^[0-9a-f]{6}$/.test(hex)) m.set(hex, [f[2] || '', [f[6], f[7], f[8]].filter(Boolean).join(' · '), f[9] || '', f[5] || '']);
+    }
+    if (m.size) paDb = m;
+  } catch (e) {} // no list yet: planes just aren't marked
+}
+async function updatePlaneAlert() {
+  try {
+    if (fs.existsSync(PA_FILE) && Date.now() - fs.statSync(PA_FILE).mtimeMs < 24 * 3600e3) return;
+    const r = await get(PA_URL, 60000);
+    if (r.status !== 200 || r.body.length < 100000) return; // not the list (an error page): keep what we have
+    fs.writeFileSync(PA_FILE + '.tmp', r.body); fs.renameSync(PA_FILE + '.tmp', PA_FILE);
+    loadPlaneAlert();
+  } catch (e) {}
+}
+loadPlaneAlert(); setTimeout(updatePlaneAlert, 5000); setInterval(updatePlaneAlert, 6 * 3600e3); // a moment after start, once the rest of the file has loaded
+
 async function refreshAircraft() {
   const j = await fetchAircraft();
   j.attribution = j.attribution || { name: PUBLIC_NAME, link: PUBLIC_LINK }; // adsb.fi asks to be credited (OpenSky sets its own when it is the backup)
@@ -566,17 +645,24 @@ async function refreshAircraft() {
       if (seen && seen.n) a.vis = seen.n;
     }
     a.first_seen = f.first;
+    const pa = paDb.get(String(a.hex).toLowerCase().replace('~', '')); if (pa) a.pa = pa; // on the plane-alert list
     if (f.nw) a.nw = 1; // not seen here in the last 30 days (planes-last-seen.json)
     a.first_pos = f.pos;
-    // flight path for the tail-number panel: a point every ~20 s or ~0.2 mi, whichever comes first
+    // flight path for the tail-number panel: a point (with its speed) every 5 seconds. The 3-hour log behind the map trails
+    // and replay keeps its old pace, a point every ~20 s or ~0.2 mi, so it doesn't grow four times over.
     if (a.lat != null && (a.seen_pos ?? 0) < 60) {
       let h = trackHist.get(a.hex);
       if (!h) trackHist.set(a.hex, h = []);
       const last = h[h.length - 1];
-      if (!last || now - last[3] > 20000 || Math.abs(a.lat - last[0]) + Math.abs(a.lon - last[1]) > 0.003) {
-        h.push([+a.lat.toFixed(5), +a.lon.toFixed(5), a.alt_baro ?? null, now]);
+      if (!last || now - last[3] >= 5000) {
+        const pt = [+a.lat.toFixed(5), +a.lon.toFixed(5), a.alt_baro ?? null, now, a.gs != null ? Math.round(a.gs) : null];
+        h.push(pt);
         if (h.length > 4000) h.shift();
-        posLog.push([a.hex, h[h.length - 1][0], h[h.length - 1][1], a.alt_baro ?? null, now, (a.flight || '').trim() || a.r || '']);
+        const lg = h.lg;
+        if (!lg || now - lg[3] > 20000 || Math.abs(pt[0] - lg[0]) + Math.abs(pt[1] - lg[1]) > 0.003) {
+          h.lg = pt;
+          posLog.push([a.hex, pt[0], pt[1], a.alt_baro ?? null, now, (a.flight || '').trim() || a.r || '']);
+        }
       }
     }
   }
@@ -885,8 +971,8 @@ function unzipEntries(buf, wanted) {
   return out;
 }
 
-function buildFaaIndex() {
-  const files = unzipEntries(fs.readFileSync(FAA_ZIP), ['MASTER.TXT', 'ACFTREF.TXT']);
+function buildFaaIndex(zip = FAA_ZIP, keep = true) { // keep: set it as the app's registry and save it; false: just return it (the monthly GitHub job)
+  const files = unzipEntries(fs.readFileSync(zip), ['MASTER.TXT', 'ACFTREF.TXT']);
   if (!files['MASTER.TXT']) throw new Error('MASTER.txt not found in ReleasableAircraft.zip');
   const rows = buf => {
     // FAA files may start with a UTF-8 byte-order mark (which reads as "ï»¿" in latin1)
@@ -908,9 +994,15 @@ function buildFaaIndex() {
     const a = rows(files['ACFTREF.TXT']), ac = a.col;
     for (const f of a.lines) acft[f[ac('CODE')]] = [f[ac('MFR')], f[ac('MODEL')], f[ac('NO-SEATS')], f[ac('NO-ENG')], f[ac('TYPE-ACFT')]];
   }
-  faa = { built: Date.now(), fileDate: fs.statSync(FAA_ZIP).mtimeMs, master, acft };
-  fs.writeFileSync(FAA_INDEX, JSON.stringify(faa));
+  const idx = { built: Date.now(), fileDate: fs.statSync(zip).mtimeMs, master, acft };
+  if (keep) { faa = idx; fs.writeFileSync(FAA_INDEX, JSON.stringify(faa)); }
   console.log(`FAA registry indexed: ${Object.keys(master).length.toLocaleString()} aircraft`);
+  return idx;
+}
+// node server.js --build-faa-index ReleasableAircraft.zip faa-index.json.gz : used by the monthly GitHub job (.github/workflows/faa-data.yml)
+if (process.argv[2] === '--build-faa-index') {
+  fs.writeFileSync(process.argv[4], require('zlib').gzipSync(JSON.stringify(buildFaaIndex(process.argv[3], false)), { level: 9 }));
+  process.exit(0);
 }
 
 function loadFaa() {
@@ -925,6 +1017,45 @@ function loadFaa() {
     if (hasZip) buildFaaIndex();
   } catch (e) { console.log('FAA registry not loaded: ' + e.message); }
   return faa;
+}
+
+// One-click download: the page's "Download the FAA registry" / "Update now" button. It happens once, when asked for, and is
+// never repeated by the app on its own; the person presses the button again whenever they want fresher records.
+const FAA_URL = 'https://registry.faa.gov/database/ReleasableAircraft.zip';
+const FAA_GITHUB = 'https://github.com/krabbzdev/KrabbzDev-PorchRadar/releases/download/faa-data/faa-index.json.gz'; // built monthly from the FAA file, with no street addresses
+let faaDl = { state: 'idle', got: 0, total: 0, error: '' }; // idle | downloading | indexing | done | error
+function downloadFaa() {
+  if (faaDl.state === 'downloading' || faaDl.state === 'indexing') return;
+  faaDl = { state: 'downloading', got: 0, total: 0, error: '' };
+  // first the small ready-made file from our GitHub (about a tenth of the size); if it isn't there yet, the FAA's own zip
+  get(FAA_GITHUB, 120000).then(r => {
+    if (r.status !== 200 || r.body.length < 1e5) throw new Error('not on GitHub yet');
+    faaDl.state = 'indexing';
+    const idx = JSON.parse(require('zlib').gunzipSync(r.body));
+    if (!idx.master || !idx.acft) throw new Error('not a registry file');
+    faa = idx; fs.writeFileSync(FAA_INDEX, JSON.stringify(faa)); faaDl.state = 'done';
+  }).catch(() => downloadFaaFromFaa());
+}
+function downloadFaaFromFaa() {
+  faaDl = { state: 'downloading', got: 0, total: 0, error: '' };
+  const tmp = FAA_ZIP + '.tmp';
+  const fail = e => { faaDl = { state: 'error', got: 0, total: 0, error: String(e.message || e) }; console.log('FAA registry download: ' + faaDl.error); try { fs.unlinkSync(tmp); } catch (x) {} };
+  const req = https.get(FAA_URL, { headers: { 'User-Agent': 'KrabbzDevPorchRadar/1.0 (home dashboard)' }, timeout: 30000 }, res => {
+    if (res.statusCode !== 200) { res.resume(); return fail(new Error('The FAA site answered HTTP ' + res.statusCode)); }
+    faaDl.total = +res.headers['content-length'] || 0;
+    const out = fs.createWriteStream(tmp);
+    res.on('data', c => { faaDl.got += c.length; });
+    res.on('error', fail); out.on('error', fail);
+    out.on('finish', () => {
+      try {
+        if (faaDl.got < 1e6 || (faaDl.total && faaDl.got < faaDl.total)) throw new Error('The download did not finish');
+        fs.renameSync(tmp, FAA_ZIP); faaDl.state = 'indexing';
+        setImmediate(() => { try { faa = null; buildFaaIndex(); faaDl.state = 'done'; } catch (e) { fail(e); } });
+      } catch (e) { fail(e); }
+    });
+    res.pipe(out);
+  });
+  req.on('timeout', () => req.destroy(new Error('The FAA site timed out'))); req.on('error', fail);
 }
 
 const REGISTRANT = { 1: 'Individual', 2: 'Partnership', 3: 'Corporation', 4: 'Co-owned', 5: 'Government', 7: 'LLC', 8: 'Non-citizen corporation', 9: 'Non-citizen co-owned' };
@@ -1437,6 +1568,9 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, JSON.stringify(await artccAt(lat, lon)));
     }
     if (url.pathname === '/api/tfrs') return send(res, 200, JSON.stringify(await tfrs()));
+    if (url.pathname === '/api/faa/download' && req.method === 'POST') { downloadFaa(); return send(res, 200, JSON.stringify(faaDl)); }
+    if (url.pathname === '/api/faa/status') { const f = loadFaa(); return send(res, 200, JSON.stringify({ ...faaDl, loaded: !!f, built: f ? f.built : null, dataDate: f ? f.fileDate : null })); }
+    if (url.pathname === '/api/airspace') return send(res, 200, JSON.stringify(airspace()));
     if (url.pathname === '/api/metars') {
       // ?bbox=south,west,north,east, rounded out to whole degrees and capped at about 8 x 10 degrees
       const [s, w, n, e] = (url.searchParams.get('bbox') || '').split(',').map(Number);
