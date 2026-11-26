@@ -4861,7 +4861,7 @@ function toast(html, color, hex) {
 // ---------- watch list (Settings > Alerts): words to look out for, in any plane's flight, tail, type, model or owner ----------
 // "military" and "helicopter" match those kinds of aircraft. A match anywhere in range gets a pop-up and a spoken
 // line, once an hour per aircraft.
-var watchText = load('skyWatch', ''), watched = new Map();
+var watchText = load('skyWatch', 'SPAR24'), watched = new Map(); // SPAR24: the Air Force's VIP flights, watched from the start
 function watchOf(a) {
   const terms = watchText.toLowerCase().split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
   if (!terms.length) return null;
