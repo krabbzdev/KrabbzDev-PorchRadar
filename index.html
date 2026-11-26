@@ -333,6 +333,13 @@
   #wall .fl::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #000; }
   #wall .fl.flap { animation: wallFlap .06s linear; }
   @keyframes wallFlap { 0% { transform: scaleY(1); } 50% { transform: scaleY(.15); } 100% { transform: scaleY(1); } }
+  #wall .w-bottom { display: flex; gap: 3vw; align-items: center; margin-top: 3vh; }
+  #wall .w-bottom .w-path { flex: 1; min-width: 0; margin-top: 0; }
+  #wall .w-mapslot { flex: 0 0 26vw; max-width: 26vw; }
+  #wall .w-map { height: clamp(110px, 24vh, 260px); border-radius: 12px; overflow: hidden; background: #0b0b0b; }
+  #wall .w-map .leaflet-control-attribution { font-size: 9px; background: #000a; color: #999; text-transform: none; }
+  #wall .wall-plane { background: none; border: none; }
+  @media (max-width: 800px) { #wall .w-bottom { flex-direction: column; align-items: stretch; } #wall .w-mapslot { flex: none; max-width: 100%; } }
   #wall .w-path { margin-top: 3vh; }
   #wall .w-path svg { width: 100%; height: clamp(70px, 15vh, 170px); display: block; }
   #wall .w-idle { text-align: center; color: #ffb000; }
@@ -4634,6 +4641,35 @@ function flipIn(root) {
     }, i * gap + k * 60));
   });
 }
+// The small map: where the plane is right now, with your home and the route. One Leaflet map is kept and moved into
+// the wall's slot each time the board is rebuilt, so the tiles stay loaded.
+let wallMap = null, wallMapEl = null, wallMapLayer = null;
+function drawWallMap(a, fresh) {
+  const slot = $('wMapSlot');
+  if (!slot || typeof L === 'undefined') return;
+  if (!wallMap) {
+    wallMapEl = document.createElement('div'); wallMapEl.className = 'w-map';
+    slot.appendChild(wallMapEl);
+    wallMap = L.map(wallMapEl, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false })
+      .setView([a.lat, a.lon], 10);
+    wallMap.attributionControl.setPrefix(false);
+    esriTiles('Canvas/World_Dark_Gray_Base', { attribution: 'Tiles &copy; Esri' }).addTo(wallMap);
+    esriTiles('Canvas/World_Dark_Gray_Reference', { pane: 'shadowPane' }).addTo(wallMap);
+    wallMapLayer = L.layerGroup().addTo(wallMap);
+  } else if (wallMapEl.parentNode !== slot) slot.appendChild(wallMapEl); // the board was rebuilt: move the map into the new slot
+  const here = [a.lat, a.lon], { from, to } = routeEnds(a);
+  wallMapLayer.clearLayers();
+  if (from) L.polyline(greatCircle(from.pos, here), { color: '#ffb000', weight: 3, opacity: .9, interactive: false }).addTo(wallMapLayer);
+  if (to) L.polyline(greatCircle(here, to.pos), { color: '#8fd3ff', weight: 3, opacity: .9, dashArray: '2 8', interactive: false }).addTo(wallMapLayer);
+  if (home) L.circleMarker(home, { radius: 6, color: '#4cc9f0', weight: 2, fillColor: '#0b1020', fillOpacity: 1, interactive: false }).addTo(wallMapLayer);
+  L.marker(here, { interactive: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'wall-plane', iconSize: [26, 26], iconAnchor: [13, 13], html: aircraftSvg(a, '#ffb000', a.track || 0) }) }).addTo(wallMapLayer);
+  wallMap.invalidateSize();
+  // new plane: zoom so it and your home are both in view (not closer than about 11); then just follow it
+  if (fresh && home) wallMap.fitBounds(L.latLngBounds([here, home]), { padding: [24, 24], maxZoom: 11, animate: false });
+  else if (fresh) wallMap.setView(here, 10, { animate: false });
+  else wallMap.panTo(here, { animate: false });
+}
+window.addEventListener('resize', () => { if (wallOn && wallMap) wallMap.invalidateSize(); });
 function drawWall() {
   const list = wallPlanes(), body = $('wallBody');
   if (!list.length) {
@@ -4666,11 +4702,12 @@ function drawWall() {
         <div class="w-type">${flapT(modelOf(a) || a.type || '')}</div>
         <div class="w-strip" id="wStrip"></div></div>
       ${ph?.src ? `<div class="w-photo"><img src="${esc(ph.src)}" alt="" onerror="this.parentNode.remove()"><small>${ph.credit ? '© ' + esc(ph.credit) + ' · ' : ''}${esc(ph.site || 'Planespotters.net')}</small></div>` : ''}</div>
-      <div id="wPath"></div>`;
+      <div class="w-bottom"><div id="wPath"></div><div class="w-mapslot" id="wMapSlot"></div></div>`;
   }
   // the numbers and the path change every second: only touched when they differ
   const set = (id, html) => { const el = $(id); if (el && el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; } };
   set('wStrip', strip); set('wPath', wallPath(a));
+  drawWallMap(a, fresh);
   if (fresh) flipIn(body);
   $('wallCount').textContent = `Plane ${wallIdx % list.length + 1} of ${list.length}`;
 }
