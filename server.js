@@ -232,8 +232,10 @@ async function lookup(hex, cs, reg, mfr = '', model = '', type = '') {
     }
   } catch (e) {}
   try {
-    const p = (JSON.parse(ps.value.body).photos || []).find(x => photoMatches(x.link, mfr));
-    if (p) out.photo = { src: p.thumbnail_large?.src || p.thumbnail?.src, link: p.link, credit: p.photographer };
+    // every matching photo of this plane (the Flight Wall flips through them); the first is the one everything else uses
+    const all = (JSON.parse(ps.value.body).photos || []).filter(x => photoMatches(x.link, mfr))
+      .map(p => ({ src: p.thumbnail_large?.src || p.thumbnail?.src, link: p.link, credit: p.photographer })).filter(p => p.src).slice(0, 6);
+    if (all.length) { out.photo = all[0]; out.photos = all; }
   } catch (e) {}
   if (!out.photo) out.photo = await airportDataPhoto(reg, hex); // second choice: Airport-Data.com's photo API
   if (!out.photo && (model || type)) out.photo = await stockPhoto(model, mfr, type);

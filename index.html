@@ -4701,6 +4701,16 @@ function drawWallMap(a, fresh) {
   else wallMap.panTo(here, { animate: false });
 }
 window.addEventListener('resize', () => { if (wallOn && wallMap) wallMap.invalidateSize(); });
+const wallCredit = p => `${p.credit ? '© ' + esc(p.credit) + ' · ' : ''}${esc(p.site || 'Planespotters.net')}`;
+const wallPreloaded = new Set();
+// more than one photo of the plane: flip through them every 2 seconds (the rest are loaded ahead so the flip is instant)
+function flipPhotos(a) {
+  const photos = look(a.hex).photos || [], img = $('wPhoto');
+  if (photos.length < 2 || !img) return;
+  if (!wallPreloaded.has(a.hex)) { wallPreloaded.add(a.hex); photos.forEach(p => { new Image().src = p.src; }); }
+  const p = photos[Math.floor(Date.now() / 2000) % photos.length];
+  if (img.dataset.s !== p.src) { img.src = p.src; img.dataset.s = p.src; $('wCredit').innerHTML = wallCredit(p); }
+}
 function drawWall() {
   const list = wallPlanes(), body = $('wallBody');
   if (!list.length) {
@@ -4736,7 +4746,7 @@ function drawWall() {
           <div class="w-cities">${flapT(short(rp.from) + ' → ' + short(rp.to) + (rp.guessed ? ' (likely)' : ''))}</div>` : ''}
         <div class="w-type">${flapT(modelOf(a) || a.type || '')}</div>
         </div>
-      ${ph?.src ? `<div class="w-photo"><img src="${esc(ph.src)}" alt="" onerror="this.parentNode.remove()"><small>${ph.credit ? '© ' + esc(ph.credit) + ' · ' : ''}${esc(ph.site || 'Planespotters.net')}</small></div>` : ''}</div>
+      ${ph?.src ? `<div class="w-photo"><img id="wPhoto" src="${esc(ph.src)}" data-s="${esc(ph.src)}" alt="" onerror="this.parentNode.remove()"><small id="wCredit">${wallCredit(ph)}</small></div>` : ''}</div>
       <div class="w-strip" id="wStrip"></div>
       <div class="w-bottom"><div id="wPath"></div><div class="w-mapslot" id="wMapSlot"></div></div>`;
   }
@@ -4744,6 +4754,7 @@ function drawWall() {
   const set = (id, html) => { const el = $(id); if (el && el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; } };
   set('wStrip', strip); set('wState', gone); set('wPath', wallPath(a));
   drawWallMap(a, fresh);
+  flipPhotos(a);
   if (fresh) flipIn(body);
   $('wallCount').textContent = `Plane ${wallIdx % list.length + 1} of ${list.length}`;
 }
