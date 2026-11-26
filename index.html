@@ -274,6 +274,7 @@
   @keyframes favPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,210,122,.75); } 50% { box-shadow: 0 0 0 10px rgba(255,210,122,0); } }
   @media (prefers-reduced-motion: reduce) { .fav-bar { animation: none; } }
   .plane .halo.fav { inset: -11px; border-width: 3px; }
+  #wall .w-gone { display: inline-block; margin-top: 1vh; padding: .4vh 1.2vw; border-radius: 999px; border: 2px solid #ffb000; color: #ffb000; font-size: clamp(14px, 2vw, 34px); font-weight: 800; }
   #wall .w-fav { display: inline-block; margin-top: 1vh; padding: .4vh 1.2vw; border-radius: 999px; background: #ffd27a; color: #1a1200; font-size: clamp(14px, 2vw, 34px); font-weight: 800; }
 
   /* Map bits */
@@ -2412,6 +2413,7 @@ function update(list) {
     }
   }
   current = rows;
+  trackWallSeen();
   updateFavBar();
   updateEmergencyBar();
   render();
@@ -4590,7 +4592,28 @@ function showFoundPlane(r, move) {
 // Planes within 2 nm of home, favorites first and then nearest, each shown for 8 seconds (click for the next). Same data as the map.
 let wallOn = false, wallIdx = 0, wallTimer = null, wallSince = 0;
 const WALL_NM = 2, WALL_MI = WALL_NM * 1.15078; // the wall only shows planes this close to home
-function wallPlanes() { return current.filter(a => a.dist != null && a.dist <= WALL_MI).sort((a, b) => (isFav(b.hex, b.reg) - isFav(a.hex, a.reg)) || (a.dist ?? 99) - (b.dist ?? 99)); }
+const WALL_KEEP_MS = 5 * 60000; // a plane that has passed stays on the wall this long
+const wallSeen = new Map(); // hex -> { a: last row while within 2 nm, first, last }; filled on every poll, wall open or not
+function trackWallSeen() {
+  const now = Date.now();
+  for (const a of current) if (a.dist != null && a.dist <= WALL_MI) {
+    const w = wallSeen.get(a.hex);
+    if (w && now - w.last < WALL_KEEP_MS) { w.a = a; w.last = now; } else wallSeen.set(a.hex, { a, first: now, last: now });
+  }
+  for (const [h, w] of wallSeen) if (now - w.last >= WALL_KEEP_MS) wallSeen.delete(h);
+}
+// Planes within 2 nm now, then ones that passed in the last 5 minutes (while still heard, with their live numbers; once
+// out of range, as last seen). Favorites first, then nearest (live) or most recent (passed).
+function wallPlanes() {
+  const now = Date.now(), out = [];
+  for (const [hex, w] of wallSeen) {
+    if (now - w.last >= WALL_KEEP_MS) continue;
+    const cur = current.find(x => x.hex === hex), live = !!cur && cur.dist != null && cur.dist <= WALL_MI;
+    out.push({ a: cur || w.a, w, live });
+  }
+  return out.sort((x, y) => (y.live - x.live) || (isFav(y.a.hex, y.a.reg) - isFav(x.a.hex, x.a.reg)) || (x.live ? (x.a.dist ?? 99) - (y.a.dist ?? 99) : y.w.last - x.w.last));
+}
+const hm24 = t => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }; // military time
 // The path of the flight: a curve from the departure airport to the destination, solid where the plane has been, dotted
 // where it is going, with the plane where it really is along the way. Without a known route there is no line.
 function wallPath(a) {
@@ -4676,19 +4699,21 @@ function drawWall() {
   if (!list.length) {
     wallSig = '';
     const t = new Date();
-    body.innerHTML = `<div class="w-idle"><b>${t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</b><small>No planes within ${WALL_NM} nm of home right now</small></div>`;
+    body.innerHTML = `<div class="w-idle"><b>${t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</b><small>No planes within ${WALL_NM} nm of home in the last 5 minutes</small></div>`;
     $('wallCount').textContent = '';
     return;
   }
   if (Date.now() - wallSince >= 8000) { wallIdx++; wallSince = Date.now(); }
-  const a = list[wallIdx % list.length], rp = routeParts(a), logo = logoUrl(a), ph = look(a.hex).photo;
-  requestLookup(a.hex); requestLookup(list[(wallIdx + 1) % list.length].hex); // so the next one already has its route and photo
+  const it = list[wallIdx % list.length], a = it.a, rp = routeParts(a), logo = logoUrl(a), ph = look(a.hex).photo;
+  requestLookup(a.hex); requestLookup(list[(wallIdx + 1) % list.length].a.hex); // so the next one already has its route and photo
   const tag = (a.flight || '').match(/^([A-Z]{3})\d/)?.[1] || (a.reg || a.flight || a.hex).toUpperCase(); // the text tile when there is no logo
   const vr = a.vr > 300 ? ' ↑' : a.vr < -300 ? ' ↓' : '';
   const short = x => (x || '').split(/[,(]/)[0].trim(), code = x => (x || '?').replace(/^K(?=[A-Z]{3}$)/, '');
   const strip = `<span><em>ALT</em>${flapT(fmtAlt(a.alt) + vr)}</span><span><em>SPEED</em>${flapT(speedTxt(a.gs) || '—')}</span>`
     + `<span><em>HDG</em>${flapT(a.track != null ? String(Math.round(a.track) % 360).padStart(3, '0') + '°' : '—')}</span>`
-    + `<span><em>DIST</em>${flapT(a.dist != null ? distTxt(a.dist) + ' ' + compass(a.brg) : '—')}</span>`;
+    + `<span><em>DIST</em>${flapT(a.dist != null ? distTxt(a.dist) + ' ' + compass(a.brg) : '—')}</span>`
+    + `<span><em>SEEN</em>${flapT(it.live || hm24(it.w.first) === hm24(it.w.last) ? hm24(it.w.first) : hm24(it.w.first) + '–' + hm24(it.w.last))}</span>`;
+  const gone = it.live ? '' : `<div class="w-gone">${(m => m < 1 ? 'Just left' : 'Left ' + m + ' min ago')(Math.floor((Date.now() - it.w.last) / 60000))}</div>`;
   // everything that doesn't change second to second: rebuilt (and flipped) only when the plane or what we know about it changes
   const sig = [a.hex, a.flight, rp.fromIcao, rp.toIcao, rp.from, rp.to, rp.guessed, logo, ph?.src, airlineOf(a), modelOf(a), isFav(a.hex, a.reg)].join('|');
   const fresh = sig !== wallSig;
@@ -4697,7 +4722,7 @@ function drawWall() {
     body.innerHTML = `<div class="w-main"><div class="w-left">
         <div class="w-top">
           <div class="w-logo${logo ? '' : ' txt'}${tag.length > 4 ? ' long' : ''}">${logo ? `<img src="${esc(logo)}" alt="" data-t="${esc(tag)}" onerror="const p=this.parentNode;p.classList.add('txt');p.textContent=this.dataset.t;p.innerHTML='<span>'+p.innerHTML+'</span>'">` : `<span>${esc(tag)}</span>`}</div>
-          <div><div class="w-flight">${flapT(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${flapT(airlineOf(a) || ownerOf(a) || '')}</div>${isFav(a.hex, a.reg) ? '<div class="w-fav">★ Favorite plane</div>' : ''}</div></div>
+          <div><div class="w-flight">${flapT(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${flapT(airlineOf(a) || ownerOf(a) || '')}</div>${isFav(a.hex, a.reg) ? '<div class="w-fav">★ Favorite plane</div>' : ''}<div id="wState"></div></div></div>
         ${rp.fromIcao || rp.toIcao ? `<div class="w-route">${flapT(code(rp.fromIcao))}<span class="w-arrow">→</span>${flapT(code(rp.toIcao))}</div>
           <div class="w-cities">${flapT(short(rp.from) + ' → ' + short(rp.to) + (rp.guessed ? ' (likely)' : ''))}</div>` : ''}
         <div class="w-type">${flapT(modelOf(a) || a.type || '')}</div>
@@ -4707,7 +4732,7 @@ function drawWall() {
   }
   // the numbers and the path change every second: only touched when they differ
   const set = (id, html) => { const el = $(id); if (el && el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; } };
-  set('wStrip', strip); set('wPath', wallPath(a));
+  set('wStrip', strip); set('wState', gone); set('wPath', wallPath(a));
   drawWallMap(a, fresh);
   if (fresh) flipIn(body);
   $('wallCount').textContent = `Plane ${wallIdx % list.length + 1} of ${list.length}`;

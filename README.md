@@ -62,7 +62,7 @@ bottom-right corner.
 - **Aircraft details**: photo, maker and model, airline, owner, route, altitude, speed and time tracked
 - **Flight Wall**: the 🧱 Flight Wall button in the top bar goes full screen with an airport split-flap board look: the
   airline logo (or a text tile), flight number, route, aircraft type and photo, altitude, speed, heading and distance, and
-  a line showing the path of the flight beside a small map of where the plane is right now, for each plane within 2 nm of home, nearest first, 8 seconds each (click for the next, Esc
+  a line showing the path of the flight beside a small map of where the plane is right now, for each plane within 2 nm of home (and for 5 minutes after it passes, marked "Left N min ago"), plus the time it was seen in 24-hour time, 8 seconds each (click for the next, Esc
   to close). Good for a spare monitor or TV
 - **Backup plane feed**: optional. Add your own OpenSky API client in Settings (Flights) and the app falls back to OpenSky, at most every 30 seconds, whenever adsb.fi is down
 - **Favorite planes**: star any plane (or type its tail number) and the app watches for it worldwide, shows whether
