@@ -99,7 +99,7 @@ home address, an optional office, your FlightAware username, and an optional con
 | Weather radar | NWS NEXRAD via [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu) |
 | Ships (optional) | [AISStream.io](https://aisstream.io) live AIS data, with your own free API key |
 | Kokoro voices (optional) | [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) via [kokoro-js](https://github.com/hexgrad/kokoro) (Apache 2.0), downloaded on first use from jsDelivr and Hugging Face; runs in your browser |
-| Map | Esri World Dark Gray, [Leaflet](https://leafletjs.com) |
+| Map | Esri maps (Dark Gray by default), or [OpenStreetMap](https://www.openstreetmap.org/copyright) tiles if you pick that style; [Leaflet](https://leafletjs.com) |
 | Address lookup | [OpenStreetMap Nominatim](https://nominatim.org) |
 
 Each service has its own terms; this project is for personal, non-commercial use.
@@ -139,7 +139,7 @@ contacts these services directly from your computer:
 - **GitHub**: to check for and download updates
 - **aviationweather.gov**: the area the map is showing (for the airport weather dots), and an airport's code or position when you click it
 - **tfr.faa.gov**: nothing about you; the app downloads the list of current TFRs
-- **Esri** (map tiles), **OurAirports** (airport list), **jsDelivr** (airline logos), **Iowa Environmental Mesonet** (weather radar), **AISStream.io** (only if you add a key: the area around your home, so it can send the ships there), **ADS-B Exchange** (only when you open its viewer), **jsDelivr** and **Hugging Face** (the Kokoro voice files, only if you pick a Kokoro voice; the words spoken never leave your PC)
+- **Esri** (map tiles), **OpenStreetMap** (map tiles, only if you pick the OpenStreetMap map style), **OurAirports** (airport list), **jsDelivr** (airline logos), **Iowa Environmental Mesonet** (weather radar), **AISStream.io** (only if you add a key: the area around your home, so it can send the ships there), **ADS-B Exchange** (only when you open its viewer), **jsDelivr** and **Hugging Face** (the Kokoro voice files, only if you pick a Kokoro voice; the words spoken never leave your PC)
 
 ## License
 

@@ -279,6 +279,7 @@
 
   /* Map bits */
   .leaflet-container { font-family: Inter, system-ui, sans-serif; }
+  .osm-dim { filter: brightness(.62) saturate(.8); } /* the OpenStreetMap style, dimmed so planes stand out */
   .plane { transition: transform .9s linear; }
   .plane svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
   .plane .tag { position: absolute; left: 22px; top: -2px; font: 600 10px var(--mono); color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
@@ -899,7 +900,7 @@
       <label class="chk" title="How the map looks"><span>🌍 Map</span>
         <select id="mapStyleSel" data-pref="Map style" data-pref-group="Map" class="chart-sel" aria-label="Map style">
           <option value="dark">Dark</option><option value="light">Light</option><option value="streets">Streets</option>
-          <option value="topo">Topographic</option><option value="satellite">Satellite</option>
+          <option value="topo">Topographic</option><option value="satellite">Satellite</option><option value="osm">OpenStreetMap</option>
         </select></label>
       <label class="chk" title="FAA aeronautical charts under the map (US). Not for navigation."><span>🗺 Chart</span>
         <select id="chartSel" data-pref="Aeronautical chart" data-pref-group="Map" class="chart-sel" aria-label="Aeronautical chart">
@@ -1522,6 +1523,7 @@ const MAP_STYLES = { // value: [background, place names or null]
   streets: ['World_Street_Map', null],
   topo: ['World_Topo_Map', null],
   satellite: ['World_Imagery', 'Reference/World_Boundaries_and_Places'],
+  osm: [null, null], // OpenStreetMap's own tiles, not Esri
 };
 const esriTiles = (svc, opts) => L.tileLayer(ESRI_MAPS + svc + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, ...opts });
 let baseLayer = null, placeNames = null;
@@ -1531,7 +1533,8 @@ function setMapStyle(name) {
   if (baseLayer) map.removeLayer(baseLayer);
   if (placeNames) map.removeLayer(placeNames);
   const [base, names] = MAP_STYLES[name];
-  baseLayer = esriTiles(base, { attribution: 'Tiles &copy; Esri' }).addTo(map);
+  baseLayer = (base ? esriTiles(base, { attribution: 'Tiles &copy; Esri' })
+    : L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'osm-dim', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' })).addTo(map);
   placeNames = names ? esriTiles(names, { pane: 'shadowPane' }) : null;
   if (placeNames && !chartLayer) placeNames.addTo(map); // a chart has its own place names
 }
@@ -5162,7 +5165,7 @@ const TIPS = {
   '#radius': 'How far from home to track planes, up to 50 nm. Planes inside this circle are listed, labelled and logged, and the blue circle on the map shows it.',
   '#showAll': 'Also draw planes that are outside your Tracker Radius circle. They appear on the map but are not in the list, the log or the alerts.',
   '#showApts': 'Show airports and heliports on the map as small squares. Click one for its runways, radio frequencies and weather.',
-  '#mapStyleSel': 'How the map looks: Dark, Light, Streets, Topographic or Satellite.',
+  '#mapStyleSel': 'How the map looks: Dark, Light, Streets, Topographic, Satellite or OpenStreetMap.',
   '#chartSel': 'Lay an FAA aeronautical chart under the planes (VFR sectional, terminal area, or IFR low or high enroute). US only, and not for navigation.',
   '#homeBtn': 'Open Settings: your home, alerts and voice, display, ships, flights, feeder stats, network, updates and more.',
   // favorites, log, ATC, airport panels
