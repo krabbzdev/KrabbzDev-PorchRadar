@@ -4587,9 +4587,10 @@ function showFoundPlane(r, move) {
 }
 
 // ---------- Flight Wall: a full-screen LED-board view of the planes in range, one at a time ----------
-// Planes inside the Tracker Radius (plus any favorite in range), favorites first and then nearest, each shown for 8 seconds (click for the next). Same data as the map.
+// Planes within 2 nm of home, favorites first and then nearest, each shown for 8 seconds (click for the next). Same data as the map.
 let wallOn = false, wallIdx = 0, wallTimer = null, wallSince = 0;
-function wallPlanes() { return current.filter(a => a.inside || isFav(a.hex, a.reg)).sort((a, b) => (isFav(b.hex, b.reg) - isFav(a.hex, a.reg)) || (a.dist ?? 99) - (b.dist ?? 99)); }
+const WALL_NM = 2, WALL_MI = WALL_NM * 1.15078; // the wall only shows planes this close to home
+function wallPlanes() { return current.filter(a => a.dist != null && a.dist <= WALL_MI).sort((a, b) => (isFav(b.hex, b.reg) - isFav(a.hex, a.reg)) || (a.dist ?? 99) - (b.dist ?? 99)); }
 // The path of the flight: a curve from the departure airport to the destination, solid where the plane has been, dotted
 // where it is going, with the plane where it really is along the way. Without a known route there is no line.
 function wallPath(a) {
@@ -4675,7 +4676,7 @@ function drawWall() {
   if (!list.length) {
     wallSig = '';
     const t = new Date();
-    body.innerHTML = `<div class="w-idle"><b>${t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</b><small>No planes in range right now</small></div>`;
+    body.innerHTML = `<div class="w-idle"><b>${t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</b><small>No planes within ${WALL_NM} nm of home right now</small></div>`;
     $('wallCount').textContent = '';
     return;
   }
