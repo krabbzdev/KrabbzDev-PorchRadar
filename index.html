@@ -301,6 +301,9 @@
     background: radial-gradient(circle at center, transparent 52%, #000 62%) 0 0 / 6px 6px; }
   #wall .w-top { display: flex; align-items: center; gap: 3vw; }
   #wall .w-logo { width: 14vw; height: 14vw; max-width: 220px; max-height: 220px; flex: none; border-radius: 14px; background: #fff; display: grid; place-items: center; overflow: hidden; }
+  #wall .w-logo.txt { background: #fff; color: #033C74; font-weight: 800; letter-spacing: .02em; text-align: center; }
+  #wall .w-logo.txt span { font-size: clamp(22px, 4.6vw, 76px); line-height: 1; }
+  #wall .w-logo.txt.long span { font-size: clamp(16px, 3vw, 50px); }
   #wall .w-logo img { width: 86%; height: 86%; object-fit: contain; }
   #wall .w-flight { font-size: clamp(40px, 11vw, 190px); font-weight: 800; line-height: 1; letter-spacing: .02em; text-shadow: 0 0 18px currentColor; }
   #wall .w-air { font-size: clamp(16px, 2.6vw, 44px); color: #fff; opacity: .85; margin-top: 1vh; }
@@ -4559,10 +4562,11 @@ function drawWall() {
   if (Date.now() - wallSince >= 8000) { wallIdx++; wallSince = Date.now(); }
   const a = list[wallIdx % list.length], rp = routeParts(a), logo = logoUrl(a);
   requestLookup(a.hex); requestLookup(list[(wallIdx + 1) % list.length].hex); // so the next one already has its route
+  const tag = (a.flight || '').match(/^([A-Z]{3})\d/)?.[1] || (a.reg || a.flight || a.hex).toUpperCase(); // the text tile when there is no logo
   const vr = a.vr > 300 ? ' ↑' : a.vr < -300 ? ' ↓' : '';
   const short = x => (x || '').split(/[,(]/)[0].trim();
   body.innerHTML = `<div class="w-top">
-      ${logo ? `<div class="w-logo"><img src="${esc(logo)}" alt="" onerror="this.parentNode.remove()"></div>` : ''}
+      <div class="w-logo${logo ? '' : ' txt'}${tag.length > 4 ? ' long' : ''}">${logo ? `<img src="${esc(logo)}" alt="" data-t="${esc(tag)}" onerror="const p=this.parentNode;p.classList.add('txt');p.textContent=this.dataset.t;p.innerHTML='<span>'+p.innerHTML+'</span>'">` : `<span>${esc(tag)}</span>`}</div>
       <div><div class="w-flight">${esc(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${esc(airlineOf(a) || ownerOf(a) || '')}</div></div></div>
     ${rp.fromIcao || rp.toIcao ? `<div class="w-route">${esc((rp.fromIcao || '?').replace(/^K/, ''))} <i>→</i> ${esc((rp.toIcao || '?').replace(/^K/, ''))}</div>
       <div class="w-cities">${esc(short(rp.from))} → ${esc(short(rp.to))}${rp.guessed ? ' (likely)' : ''}</div>` : ''}
