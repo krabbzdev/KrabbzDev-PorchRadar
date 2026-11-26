@@ -726,7 +726,8 @@ async function addFavorite(text) {
 }
 // Planes everyone starts with in Favorite planes. Each is added once per install (remembered in settings.json), so
 // removing one sticks; if the lookup fails (offline) it is tried again at the next start.
-const DEFAULT_FAVORITES = ['N29UB', 'N247WE', 'N628TS', 'N711MG', 'N7478D'];
+// ADFDF8 and ADFDF9 are the two Air Force One jets (VC-25A 82-8000 and 92-9000), added by transponder code
+const DEFAULT_FAVORITES = ['N29UB', 'N247WE', 'N628TS', 'N711MG', 'N7478D', 'ADFDF8', 'ADFDF9'];
 async function addDefaultFavorites() {
   const done = settings.defaultFavs || [];
   for (const reg of DEFAULT_FAVORITES) {
