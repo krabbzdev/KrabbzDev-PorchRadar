@@ -293,6 +293,29 @@
   .badge.sp { background: color-mix(in srgb, var(--bc) 18%, transparent); color: var(--bc); }
   .card.special { box-shadow: inset 3px 0 0 var(--bc); }
   /* Overhead takeover */
+  /* Flight Wall: a full-screen LED-panel style board that cycles through the planes in range */
+  #wall { position: fixed; inset: 0; z-index: 3500; background: #000; color: #ffb000; display: none; flex-direction: column; justify-content: center;
+    padding: 4vh 5vw; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; text-transform: uppercase; cursor: pointer; overflow: hidden; }
+  #wall.show { display: flex; }
+  #wall::after { content: ""; position: absolute; inset: 0; pointer-events: none; /* the LED dot grid */
+    background: radial-gradient(circle at center, transparent 52%, #000 62%) 0 0 / 6px 6px; }
+  #wall .w-top { display: flex; align-items: center; gap: 3vw; }
+  #wall .w-logo { width: 14vw; height: 14vw; max-width: 220px; max-height: 220px; flex: none; border-radius: 14px; background: #fff; display: grid; place-items: center; overflow: hidden; }
+  #wall .w-logo img { width: 86%; height: 86%; object-fit: contain; }
+  #wall .w-flight { font-size: clamp(40px, 11vw, 190px); font-weight: 800; line-height: 1; letter-spacing: .02em; text-shadow: 0 0 18px currentColor; }
+  #wall .w-air { font-size: clamp(16px, 2.6vw, 44px); color: #fff; opacity: .85; margin-top: 1vh; }
+  #wall .w-route { font-size: clamp(30px, 8vw, 140px); font-weight: 800; color: #fff; margin: 4vh 0 0; text-shadow: 0 0 14px #fff6; white-space: nowrap; }
+  #wall .w-route i { color: #ffb000; font-style: normal; }
+  #wall .w-cities { font-size: clamp(14px, 2.2vw, 38px); color: #8fd3ff; margin-top: .5vh; }
+  #wall .w-type { font-size: clamp(16px, 2.8vw, 48px); color: #7dff9a; margin-top: 3vh; }
+  #wall .w-strip { display: flex; gap: 4vw; margin-top: 4vh; flex-wrap: wrap; }
+  #wall .w-strip span { display: flex; flex-direction: column; font-size: clamp(22px, 5vw, 86px); font-weight: 800; color: #fff; }
+  #wall .w-strip em { font-style: normal; font-size: clamp(11px, 1.4vw, 24px); color: #ffb000; letter-spacing: .15em; }
+  #wall .w-idle { text-align: center; color: #ffb000; }
+  #wall .w-idle b { display: block; font-size: clamp(50px, 16vw, 280px); text-shadow: 0 0 20px currentColor; }
+  #wall .w-idle small { font-size: clamp(14px, 2.6vw, 44px); color: #8fd3ff; }
+  #wall .w-foot { position: absolute; left: 5vw; right: 5vw; bottom: 2.5vh; z-index: 1; display: flex; justify-content: space-between; font-size: clamp(11px, 1.3vw, 22px); color: #ffb00099; }
+  #wall .w-x { position: absolute; top: 2vh; right: 2vw; z-index: 2; background: #1a1200; color: #ffb000; border: 1px solid #ffb00066; border-radius: 10px; padding: 8px 14px; font: inherit; font-size: 14px; cursor: pointer; }
   #takeover { position: fixed; inset: 0; z-index: 3000; background: var(--bg); display: none; grid-template-rows: auto 1fr; animation: toIn .35s ease-out; }
   #takeover.show { display: grid; }
   @keyframes toIn { from { opacity: 0; transform: scale(1.02); } }
@@ -861,6 +884,7 @@
       <label class="chk vol" title="Volume of the chime and the voice"><span aria-hidden="true">🔉</span><input type="range" id="volIn" data-pref="Volume" data-pref-group="Alerts and sound" data-pref-scale="100" data-pref-unit="%" min="0" max="1" step="0.05" aria-label="Volume"><b id="volVal"></b></label>
     </div>
   </details>
+  <button id="wallBtn" type="button" title="Full-screen Flight Wall: the planes near you, one at a time, like an airport board"><span aria-hidden="true">🧱</span><span class="btn-txt"> Flight Wall</span></button>
   <button id="homeBtn">⚙<span class="btn-txt"> Settings</span></button>
 </header>
 
@@ -1106,6 +1130,14 @@
         <div class="row"><input id="aeroIn" placeholder="Paste your AeroAPI key" autocomplete="off" spellcheck="false"><button id="aeroClear" title="Remove the saved key">Remove</button></div>
         <p class="hint">AeroAPI charges per request, so the app asks about a flight only when you open its card, at most once every 10 minutes. The key stays on this PC (in settings.json).</p>
       </div>
+      <div class="place" id="osBox">
+        <h4>🛰 Backup plane feed <small>optional, your own OpenSky account</small></h4>
+        <p class="hint">If the main plane feed (adsb.fi) is down, the app can ask the OpenSky Network for the planes near you instead. It does this only while the main feed is failing, and at most every 30 seconds. Create an API client on your <a href="https://opensky-network.org/my-opensky/account" target="_blank" rel="noopener">OpenSky account page</a> and paste its client ID and secret here. OpenSky does not send aircraft type or tail number.</p>
+        <div class="where" id="osCur"></div>
+        <div class="row"><input id="osId" placeholder="OpenSky client ID" autocomplete="off" spellcheck="false"></div>
+        <div class="row"><input id="osSecret" type="password" placeholder="OpenSky client secret" autocomplete="off" spellcheck="false"><button id="osClear" title="Remove the saved client">Remove</button></div>
+        <p class="hint">When it is used, your home area (a box around your Tracker Radius) is sent to OpenSky. The client ID and secret stay on this PC (in settings.json).</p>
+      </div>
     </section>
     <section data-pane="feeder" hidden>
       <div class="place">
@@ -1210,6 +1242,12 @@
   <div id="regBody"></div>
   <div class="acts"><button id="regClose">Close</button></div>
 </dialog>
+
+<div id="wall" role="dialog" aria-label="Flight Wall" aria-live="off">
+  <button type="button" class="w-x" id="wallClose">✕ Close</button>
+  <div id="wallBody"></div>
+  <div class="w-foot"><span id="wallCount"></span><span>Click for the next plane · Esc to close</span></div>
+</div>
 
 <div id="takeover" role="dialog" aria-label="Aircraft overhead">
   <div class="to-bar">
@@ -3703,6 +3741,7 @@ async function openHome(focusHome, firstRun) {
   aisClear = false; $('aisIn').value = '';
   showAis();
   aeroClear = false; $('aeroIn').value = ''; showAero();
+  osClear = false; $('osId').value = $('osSecret').value = ''; showOs();
   // cruise lines to watch (none saved = all)
   $('cruiseLines').innerHTML = (cfg.cruiseLineOptions || []).map(n => `<label class="chk"><input type="checkbox" value="${esc(n)}"${!Array.isArray(cfg.cruiseLines) || cfg.cruiseLines.includes(n) ? ' checked' : ''}> ${esc(n)}</label>`).join('');
   refreshUpdatePanel();
@@ -3722,6 +3761,17 @@ function showAis() {
   el.className = 'where';
   el.innerHTML = `🔑 Key saved (${esc(cfg.aisKeyHint)})<small>${st === 'live' ? '✓ Connected: ' + shipData.ships.length + ' ships in range' : err ? '⚠ ' + esc(err) : esc(st)}</small>`;
 }
+let osClear = false;
+function showOs() {
+  const el = $('osCur'), typed = $('osId').value.trim() || $('osSecret').value.trim();
+  el.className = 'where' + (osClear || !cfg.openskySet && !typed ? ' unset' : typed ? ' changed' : '');
+  el.innerHTML = osClear ? 'The saved client will be removed when you click Save.'
+    : typed ? '🔑 New client entered <b style="color:var(--accent)">· click Save to use it</b>'
+    : cfg.openskySet ? '🔑 Client saved (' + esc(cfg.openskyHint) + ')<small>Used only if the main plane feed fails</small>' : 'Not set up, so there is no backup if the main plane feed is down.';
+}
+$('osId').addEventListener('input', () => { osClear = false; showOs(); });
+$('osSecret').addEventListener('input', () => { osClear = false; showOs(); });
+$('osClear').onclick = () => { $('osId').value = $('osSecret').value = ''; osClear = !!cfg.openskySet; showOs(); };
 let aeroClear = false;
 function showAero() {
   const el = $('aeroCur'), typed = $('aeroIn').value.trim();
@@ -3902,6 +3952,7 @@ $('saveHome').onclick = async () => {
     // all ticked = null, so lines added later are watched too
     cruiseLines: (() => { const boxes = [...$('cruiseLines').querySelectorAll('input')]; return !boxes.length || boxes.every(c => c.checked) ? null : boxes.filter(c => c.checked).map(c => c.value); })(),
     ...($('aeroIn').value.trim() ? { aeroKey: $('aeroIn').value.trim() } : aeroClear ? { aeroKey: '' } : {}),
+    ...($('osId').value.trim() && $('osSecret').value.trim() ? { openskyId: $('osId').value.trim(), openskySecret: $('osSecret').value.trim() } : osClear ? { openskyId: '', openskySecret: '' } : {}),
     ...($('aisIn').value.trim() ? { aisKey: $('aisIn').value.trim() } : aisClear ? { aisKey: '' } : {}),
   };
   await saveCfg(patch);
@@ -4493,6 +4544,53 @@ function showFoundPlane(r, move) {
   if (move || wasOpen) m.openPopup();
 }
 
+// ---------- Flight Wall: a full-screen LED-board view of the planes in range, one at a time ----------
+// Planes inside the Tracker Radius, nearest first, each shown for 8 seconds (click for the next). Same data as the map.
+let wallOn = false, wallIdx = 0, wallTimer = null, wallSince = 0;
+function wallPlanes() { return current.filter(a => a.inside).sort((a, b) => (a.dist ?? 99) - (b.dist ?? 99)); }
+function drawWall() {
+  const list = wallPlanes(), body = $('wallBody');
+  if (!list.length) {
+    const t = new Date();
+    body.innerHTML = `<div class="w-idle"><b>${t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</b><small>No planes in range right now</small></div>`;
+    $('wallCount').textContent = '';
+    return;
+  }
+  if (Date.now() - wallSince >= 8000) { wallIdx++; wallSince = Date.now(); }
+  const a = list[wallIdx % list.length], rp = routeParts(a), logo = logoUrl(a);
+  requestLookup(a.hex); requestLookup(list[(wallIdx + 1) % list.length].hex); // so the next one already has its route
+  const vr = a.vr > 300 ? ' ↑' : a.vr < -300 ? ' ↓' : '';
+  const short = x => (x || '').split(/[,(]/)[0].trim();
+  body.innerHTML = `<div class="w-top">
+      ${logo ? `<div class="w-logo"><img src="${esc(logo)}" alt="" onerror="this.parentNode.remove()"></div>` : ''}
+      <div><div class="w-flight">${esc(a.flight || a.reg || a.hex.toUpperCase())}</div><div class="w-air">${esc(airlineOf(a) || ownerOf(a) || '')}</div></div></div>
+    ${rp.fromIcao || rp.toIcao ? `<div class="w-route">${esc((rp.fromIcao || '?').replace(/^K/, ''))} <i>→</i> ${esc((rp.toIcao || '?').replace(/^K/, ''))}</div>
+      <div class="w-cities">${esc(short(rp.from))} → ${esc(short(rp.to))}${rp.guessed ? ' (likely)' : ''}</div>` : ''}
+    <div class="w-type">${esc(modelOf(a) || a.type || '')}</div>
+    <div class="w-strip">
+      <span><em>ALT</em>${esc(fmtAlt(a.alt))}${vr}</span><span><em>SPEED</em>${esc(speedTxt(a.gs) || '—')}</span>
+      <span><em>HDG</em>${a.track != null ? String(Math.round(a.track) % 360).padStart(3, '0') + '°' : '—'}</span>
+      <span><em>DIST</em>${a.dist != null ? esc(distTxt(a.dist) + ' ' + compass(a.brg)) : '—'}</span></div>`;
+  $('wallCount').textContent = `Plane ${wallIdx % list.length + 1} of ${list.length}`;
+}
+function openWall() {
+  wallOn = true; wallIdx = 0; wallSince = Date.now();
+  $('wall').classList.add('show');
+  try { $('wall').requestFullscreen?.().catch(() => {}); } catch (e) {}
+  drawWall(); wallTimer = setInterval(drawWall, 1000);
+}
+function closeWall() {
+  if (!wallOn) return;
+  wallOn = false; clearInterval(wallTimer);
+  $('wall').classList.remove('show');
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+}
+$('wallBtn').addEventListener('click', openWall);
+$('wallClose').addEventListener('click', e => { e.stopPropagation(); closeWall(); });
+$('wall').addEventListener('click', () => { wallIdx++; wallSince = Date.now(); drawWall(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && wallOn) closeWall(); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) closeWall(); }); // leaving full screen closes it
+
 // ---------- map legend: what the colours and icons mean (🗺 Legend button, bottom left of the map) ----------
 const legend = L.control({ position: 'bottomleft' });
 legend.onAdd = () => {
@@ -4941,6 +5039,8 @@ const TIPS = {
   '#aisIn': 'Your free AISStream.io key for live ship positions. It is stored only on this PC and never sent to the page.',
   '#linesAll': 'Show every cruise line.',
   '#linesNone': 'Hide every cruise line, then tick the ones you want.',
+  '#osId': 'The client ID from an API client on your OpenSky account page. Used only as a backup if the main plane feed is down.',
+  '#osSecret': 'The client secret that goes with the client ID. It is stored only on this PC.',
   '#aeroIn': 'Your FlightAware AeroAPI key (not a FlightAware website login). It fills in the real route and times on the plane card. It is stored only on this PC.',
   '#faIn': 'Your FlightAware username, if you feed ADS-B data to FlightAware, to show your feeder stats.',
   '#contactIn': 'An email or web page, sent to the photo and plane-data sites as a courtesy so they can reach you if needed. Optional.',

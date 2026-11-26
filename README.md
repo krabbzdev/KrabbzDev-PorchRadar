@@ -60,6 +60,10 @@ bottom-right corner.
   frequencies, current weather, planes arriving and leaving right now, a Wikipedia summary and handy links
 - **Planned route**: click a plane to draw its route on the map, from its departure airport to its destination
 - **Aircraft details**: photo, maker and model, airline, owner, route, altitude, speed and time tracked
+- **Flight Wall**: the 🧱 Flight Wall button in the top bar goes full screen with an LED-board look: airline logo, flight
+  number, route, aircraft type, altitude, speed, heading and distance for each plane in range, nearest first, 8 seconds
+  each (click for the next, Esc to close). Good for a spare monitor or TV
+- **Backup plane feed**: optional. Add your own OpenSky API client in Settings (Flights) and the app falls back to OpenSky, at most every 30 seconds, whenever adsb.fi is down
 - **Favorite planes**: star any plane (or type its tail number) and the app watches for it worldwide, shows whether
   it's flying now or where it was last seen, and pops up when it flies into range
 - **Plane finder**: type a tail number (like N1932K) in the Jump to box to go to the plane, live, or to where the app
@@ -125,6 +129,7 @@ analytics or tracking. Your settings stay in `settings.json` next to the program
 contacts these services directly from your computer:
 
 - **adsb.fi**: your home's map coordinates, to ask which aircraft are nearby; tail numbers you search for, and your favorite planes' codes, to find them
+- **OpenSky Network** (only if you add your own OpenSky API client in Settings, and only while adsb.fi is failing): a box of map coordinates around your home, to ask which aircraft are nearby
 - **OpenStreetMap Nominatim**: an address you type into Settings, to find its coordinates
 - **Planespotters.net, Airport-Data.com, adsbdb, adsb.lol, Wikipedia**: aircraft identifiers, callsigns and registrations, to look up photos, owners and routes
 - **FlightAware**: the feeder username in Settings, to show its public stats page

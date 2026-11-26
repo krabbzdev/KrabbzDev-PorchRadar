@@ -486,16 +486,57 @@ function adsbfiGet(apiPath, timeoutMs = 8000) {
   adsbfiNext = at + 1100;
   return new Promise(r => setTimeout(r, at - Date.now())).then(() => get('https://opendata.adsb.fi/api/v2/' + apiPath, timeoutMs));
 }
+// Backup feed: OpenSky (optional, the user's own API client). Used only when adsb.fi fails. A map search of the Tracker
+// Radius costs 1 credit, and a standard account has 4,000 a day, so at most one call every 30 s (~2,900 a day).
+const openskyKeySet = () => !!(settings.openskyId && settings.openskySecret);
+const OS_TOKEN_URL = 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
+let osToken = null, osLast = null, osBlockedUntil = 0;
+async function openskyAircraft(c) {
+  if (osLast && Date.now() - osLast.at < 30000) return osLast.json;
+  if (Date.now() < osBlockedUntil) throw new Error('daily credits used up, waiting');
+  if (!osToken || osToken.exp < Date.now() + 60000) {
+    const r = await fetch(OS_TOKEN_URL, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(10000),
+      body: new URLSearchParams({ grant_type: 'client_credentials', client_id: settings.openskyId, client_secret: settings.openskySecret }) });
+    if (!r.ok) throw new Error(`sign-in failed (HTTP ${r.status}); check the client ID and secret`);
+    const t = await r.json();
+    osToken = { value: t.access_token, exp: Date.now() + (t.expires_in || 1800) * 1000 };
+  }
+  const dLat = PUBLIC_RADIUS_NM / 60, dLon = dLat / Math.max(0.2, Math.cos(c[0] * Math.PI / 180));
+  const q = new URLSearchParams({ lamin: c[0] - dLat, lamax: c[0] + dLat, lomin: c[1] - dLon, lomax: c[1] + dLon });
+  const r = await fetch('https://opensky-network.org/api/states/all?' + q, { headers: { authorization: 'Bearer ' + osToken.value }, signal: AbortSignal.timeout(10000) });
+  if (r.status === 401) { osToken = null; throw new Error('token expired, retrying'); }
+  if (r.status === 429) { osBlockedUntil = Date.now() + (Number(r.headers.get('x-rate-limit-retry-after-seconds')) || 3600) * 1000; throw new Error('daily credits used up'); }
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json(), now = Date.now();
+  // state vector -> the same fields adsb.fi uses (metres -> feet, m/s -> knots / feet per minute)
+  const aircraft = (j.states || []).filter(v => v[5] != null && v[6] != null).map(v => ({
+    hex: v[0], flight: (v[1] || '').trim(), lat: v[6], lon: v[5],
+    alt_baro: v[8] ? 'ground' : v[7] != null ? Math.round(v[7] * 3.28084) : null,
+    alt_geom: v[13] != null ? Math.round(v[13] * 3.28084) : undefined,
+    gs: v[9] != null ? +(v[9] * 1.94384).toFixed(1) : undefined, track: v[10] ?? undefined,
+    baro_rate: v[11] != null ? Math.round(v[11] * 196.85) : undefined, squawk: v[14] || undefined,
+    seen_pos: v[3] ? Math.max(0, Math.round(now / 1000 - v[3])) : 0 }));
+  const json = { now: j.time ? j.time * 1000 : now, aircraft, attribution: { name: 'OpenSky Network', link: 'https://opensky-network.org' } };
+  osLast = { at: now, json };
+  return json;
+}
 async function fetchAircraft() {
   // stay well under the 1/sec limit: at most one request every 5 s, shared by everyone viewing
   if (!lastPublic || Date.now() - lastPublic.at >= 5000) {
     const c = settings.home;
     if (!c) throw new Error('Set your home location (Settings) so we know where to look');
-    const r = await adsbfiGet(`lat/${c[0].toFixed(4)}/lon/${c[1].toFixed(4)}/dist/${PUBLIC_RADIUS_NM}`);
-    if (r.status === 429) throw new Error('Public data rate limit hit - retrying shortly');
-    if (r.status !== 200) throw new Error(`Public data unavailable (HTTP ${r.status})`);
-    const j = JSON.parse(r.body);
-    lastPublic = { at: Date.now(), json: { now: j.now, aircraft: j.aircraft || j.ac || [] } };
+    let json;
+    try {
+      const r = await adsbfiGet(`lat/${c[0].toFixed(4)}/lon/${c[1].toFixed(4)}/dist/${PUBLIC_RADIUS_NM}`);
+      if (r.status === 429) throw new Error('Public data rate limit hit - retrying shortly');
+      if (r.status !== 200) throw new Error(`Public data unavailable (HTTP ${r.status})`);
+      const j = JSON.parse(r.body);
+      json = { now: j.now, aircraft: j.aircraft || j.ac || [] };
+    } catch (e) {
+      if (!openskyKeySet()) throw e;
+      json = await openskyAircraft(c).catch(e2 => { throw new Error(`${e.message}; OpenSky backup: ${e2.message}`); });
+    }
+    lastPublic = { at: Date.now(), json };
   }
   return JSON.parse(JSON.stringify(lastPublic.json)); // copy: we stamp fields onto it below
 }
@@ -504,7 +545,7 @@ async function fetchAircraft() {
 let latest = null;
 async function refreshAircraft() {
   const j = await fetchAircraft();
-  j.attribution = { name: PUBLIC_NAME, link: PUBLIC_LINK }; // adsb.fi asks to be credited
+  j.attribution = j.attribution || { name: PUBLIC_NAME, link: PUBLIC_LINK }; // adsb.fi asks to be credited (OpenSky sets its own when it is the backup)
   const now = Date.now();
   for (const a of j.aircraft || []) {
     let f = firstSeen.get(a.hex);
@@ -1190,7 +1231,7 @@ const server = http.createServer(async (req, res) => {
       // Settings > More > Reset settings to default: every option back to how a fresh install starts. Home, office,
       // accounts, the ship key, cruise lines and favorites are kept unless "everything" is asked for.
       const b = JSON.parse(await readBody(req) || '{}');
-      const keep = b.everything ? [] : ['home', 'homeLabel', 'homeName', 'office', 'faUser', 'contact', 'aisKey', 'aeroKey', 'cruiseLines', 'favorites'];
+      const keep = b.everything ? [] : ['home', 'homeLabel', 'homeName', 'office', 'faUser', 'contact', 'aisKey', 'aeroKey', 'openskyId', 'openskySecret', 'cruiseLines', 'favorites'];
       const wasLan = !!settings.lanAccess;
       settings = Object.fromEntries(Object.entries(settings).filter(([k]) => keep.includes(k)));
       fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
@@ -1282,6 +1323,8 @@ const server = http.createServer(async (req, res) => {
         }
         if ('aisKey' in b) { settings.aisKey = String(b.aisKey || '').trim().slice(0, 100); setTimeout(watchConnect, 2000); }
         if ('aeroKey' in b) { settings.aeroKey = String(b.aeroKey || '').trim().slice(0, 100); aeroCache.clear(); }
+        if ('openskyId' in b) { settings.openskyId = String(b.openskyId || '').trim().slice(0, 100); osToken = osLast = null; osBlockedUntil = 0; }
+        if ('openskySecret' in b) { settings.openskySecret = String(b.openskySecret || '').trim().slice(0, 100); osToken = osLast = null; osBlockedUntil = 0; }
         if ('lanAccess' in b &&!!b.lanAccess !== !!settings.lanAccess) { settings.lanAccess = !!b.lanAccess; setTimeout(relisten, 500); }
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 1));
         aisRefresh();
@@ -1295,6 +1338,7 @@ const server = http.createServer(async (req, res) => {
         cruiseLines: Array.isArray(settings.cruiseLines) ? settings.cruiseLines : null,
         cruiseLineOptions: CRUISE_BRANDS.filter(x => x[3]).map(x => x[1]), // lines with a fleet list to watch
         aeroKeySet: !!settings.aeroKey, aeroKeyHint: settings.aeroKey && isLocalReq(req) ? '••••' + settings.aeroKey.slice(-4) : '',
+        openskySet: openskyKeySet(), openskyHint: settings.openskyId && isLocalReq(req) ? '••••' + settings.openskyId.slice(-4) : '',
         aisKeySet: !!aisKey(), aisKeyHint: aisKey() && isLocalReq(req) ? '••••' + aisKey().slice(-4) : '',
         lanAccess: !!settings.lanAccess, lanUrls: lanUrls(), thisPc: isLocalReq(req),
         localUrl: `http://localhost:${PORT}`, networkUrls: isLocalReq(req) ? networkUrls() : [],
