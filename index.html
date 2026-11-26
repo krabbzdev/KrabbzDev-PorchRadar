@@ -403,8 +403,13 @@
   .to-bar-info .route em { font-style: normal; color: var(--warn); font-weight: 700; font-size: 12px; letter-spacing: .5px; text-transform: uppercase; margin-right: 4px; }
   .to-bar-info .route.none { color: var(--muted); font-weight: 400; font-size: 14px; }
   @media (max-width: 960px) { .to-bar { flex-wrap: wrap; } .to-bar .hint { display: none; } .to-bar-info { border-left: 0; padding-left: 0; flex-basis: 100%; order: 3; } }
-  .to-body { display: grid; grid-template-columns: minmax(260px, 330px) 1fr 400px; min-height: 0; } /* the dials and numbers on the left, the map in the middle, who it is on the right */
+  .to-body { display: grid; grid-template-columns: clamp(300px, 26vw, 500px) 1fr 400px; min-height: 0; } /* the dials and numbers on the left, the map in the middle, who it is on the right */
   .to-left { border-left: 0 !important; border-right: 1px solid var(--line); }
+  .to-left .to-main { min-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+  .to-left .to-inst { margin-top: auto; padding-top: 14px; } /* the dials sit at the bottom of the left column, as big as it is wide */
+  .to-left .to-inst { padding: 14px 4px 10px; gap: 2px; }
+  .to-left .to-inst svg { max-width: none; }
+  .to-left .to-grid { margin-bottom: 14px; }
   #toMap { min-height: 0; background: var(--map-bg); }
   .to-info { border-left: 1px solid var(--line); overflow-y: auto; background: var(--panel); }
   .to-photo { height: 240px; background: var(--thumb-bg) center/cover no-repeat; position: relative; display: grid; place-items: center; }
@@ -824,6 +829,7 @@
   .go { cursor: pointer; }
   .go:hover b, span.go:hover { color: var(--accent); text-decoration: underline; }
   .rg-photo { position: relative; }
+  .rg-photo:not(.multi) .rg-pn, .rg-photo:not(.multi) .rg-dots { display: none; }
   .rg-pn { position: absolute; top: 50%; translate: 0 -50%; width: 34px; height: 54px; padding: 0; font-size: 26px; line-height: 1; color: #fff; background: rgba(5,10,14,.55); border: 0; border-radius: 6px; opacity: 0; transition: opacity .15s; cursor: pointer; }
   .rg-pn.prev { left: 8px; } .rg-pn.next { right: 8px; }
   .rg-photo:hover .rg-pn, .rg-pn:focus-visible { opacity: 1; }
@@ -3353,13 +3359,13 @@ function drawTakeover(a) {
     </div>`;
   $('toLeft').innerHTML = `
     <div class="to-main">
-      ${toInstruments(a)}
       <div class="to-grid">
         <div><div class="k">From home${infoBtn('Distance')}</div><div class="v">${distTxt(a.dist, 2)} ${compass(a.brg)}</div>${infoText('Distance')}</div>
         <div><div class="k">Squawk${infoBtn('Squawk')}</div><div class="v">${squawkTxt(a.squawk) || '—'}</div>${infoText('Squawk')}</div>
         <div><div class="k">Tracked${infoBtn('Tracked')}</div><div class="v">${trackedFor(a) || '—'}</div>${infoText('Tracked')}</div>
       </div>
       ${toExtras(a)}
+      ${toInstruments(a)}
     </div>`;
 }
 
@@ -3606,8 +3612,7 @@ async function openReg(hex, reg) {
       : `<div class="rg-src">Non-US registration; the FAA registry only covers N-numbers. Owner shown is from the live feed.</div>`;
   $('regBody').innerHTML = `
     <div class="rg-hero ${Lk.photo?.src ? '' : 'nophoto'}">
-      ${Lk.photo?.src ? `<div class="rg-photo" id="rgPhoto" style="background-image:url('${Lk.photo.src}')">${photoCredit(Lk.photo)}${(Lk.photos || []).length > 1
-        ? `<button type="button" class="rg-pn prev" title="Previous photo" aria-label="Previous photo">‹</button><button type="button" class="rg-pn next" title="Next photo" aria-label="Next photo">›</button><div class="rg-dots" id="rgDots">${Lk.photos.map((_, i) => `<i data-i="${i}"></i>`).join('')}</div>` : ''}</div>` : ''}
+      ${Lk.photo?.src ? `<div class="rg-photo" id="rgPhoto" style="background-image:url('${Lk.photo.src}')">${photoCredit(Lk.photo)}<button type="button" class="rg-pn prev" title="Previous photo" aria-label="Previous photo">‹</button><button type="button" class="rg-pn next" title="Next photo" aria-label="Next photo">›</button><div class="rg-dots" id="rgDots"></div></div>` : ''}
       <div class="rg-mapbox"><div id="rgMap" class="rg-map"></div><div class="rg-grat"></div>
         <div class="rg-tag">FLIGHT PATH<span id="rgCap"></span></div>
         <div class="rg-scale"><i id="rgLegend"></i><span><b>40k</b><b>30k</b><b>20k</b><b>10k</b><b>0</b></span></div>
@@ -3636,27 +3641,38 @@ async function openReg(hex, reg) {
   // the photo library: this plane's photos, a click or the mouse wheel on the photo (or the arrow keys) moves through them
   const faaP = $('faaGetPanel'); // the same download as Settings > Flights; the panel then reloads with the full record
   if (faaP) faaP.onclick = () => faaDownload(faaP, $('faaMsgPanel'), () => openReg(hex, reg));
-  const pics = Lk.photos || [], pEl = $('rgPhoto');
-  if (pEl && pics.length > 1) {
-    let pi = Math.max(0, pics.findIndex(q => q.src === Lk.photo.src));
-    pics.forEach(q => { new Image().src = q.src; }); // ready before you get to them
+  const pEl = $('rgPhoto'); // every photo of this plane we can get (Planespotters, then Airport-Data.com) rotates here, one every 5 seconds
+  clearInterval(rgPhotoTimer); regPhotoKeys = null;
+  if (pEl) {
+    let pics = [], pi = 0;
+    const merge = () => { const seen = new Set(), out = []; for (const q of [...(Lk.photos || []), Lk.photo, ...photosFor(a).map(x => ({ ...x, site: 'Airport-Data.com' }))]) if (q?.src && !seen.has(q.src)) { seen.add(q.src); out.push(q); } return out; };
     const showPic = n => {
       pi = (n + pics.length) % pics.length;
       pEl.style.backgroundImage = `url('${pics[pi].src}')`;
       pEl.querySelector('.credit')?.remove(); pEl.insertAdjacentHTML('beforeend', photoCredit(pics[pi]));
       $('rgDots').querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === pi));
     };
+    const setPics = list => {
+      pics = list; pics.forEach(q => { new Image().src = q.src; }); // ready before you get to them
+      $('rgDots').innerHTML = pics.map((_, i) => `<i data-i="${i}"></i>`).join(''); pEl.classList.toggle('multi', pics.length > 1);
+      pi = Math.min(pi, pics.length - 1); showPic(pi);
+    };
+    setPics(merge());
+    let waits = 0; const more = setInterval(() => { // Airport-Data's photos arrive a moment after the panel opens
+      const got = morePhotos.get(hex);
+      if ((got && got !== 'pending') || ++waits > 16 || !$('regDlg').open) { clearInterval(more); if (got && got !== 'pending' && $('regDlg').open) setPics(merge()); }
+    }, 500);
     pEl.querySelector('.prev').onclick = () => showPic(pi - 1); pEl.querySelector('.next').onclick = () => showPic(pi + 1);
     $('rgDots').onclick = e => { const d = e.target.closest('i'); if (d) showPic(+d.dataset.i); };
-    pEl.addEventListener('wheel', e => { e.preventDefault(); showPic(pi + (e.deltaY > 0 ? 1 : -1)); }, { passive: false });
-    regPhotoKeys = e => { if (e.key === 'ArrowRight') showPic(pi + 1); else if (e.key === 'ArrowLeft') showPic(pi - 1); };
-    showPic(pi);
-  } else regPhotoKeys = null;
+    pEl.addEventListener('wheel', e => { if (pics.length < 2) return; e.preventDefault(); showPic(pi + (e.deltaY > 0 ? 1 : -1)); }, { passive: false });
+    regPhotoKeys = e => { if (pics.length > 1) { if (e.key === 'ArrowRight') showPic(pi + 1); else if (e.key === 'ArrowLeft') showPic(pi - 1); } };
+    rgPhotoTimer = setInterval(() => { if (pics.length > 1 && $('regDlg').open) showPic(pi + 1); }, 5000);
+  }
   startRegMap(hex);
 }
 
 // Flight path map inside the tail-number panel (track kept by the server while the plane is in range).
-let rgMap = null, rgLayers = null, rgTimer = null;
+let rgMap = null, rgLayers = null, rgTimer = null, rgPhotoTimer = null;
 function startRegMap(hex) {
   if (rgMap) rgMap.remove();
   clearInterval(rgTimer);
@@ -3671,7 +3687,7 @@ function startRegMap(hex) {
   drawRegTrack(hex, true);
   rgTimer = setInterval(() => drawRegTrack(hex, false), 5000);
 }
-$('regDlg').addEventListener('close', () => { clearInterval(rgTimer); if (rgMap) { rgMap.remove(); rgMap = null; } });
+$('regDlg').addEventListener('close', () => { clearInterval(rgTimer); clearInterval(rgPhotoTimer); if (rgMap) { rgMap.remove(); rgMap = null; } });
 
 function renderRegLive(hex) {
   const el = $('rgLive'), a = tracks.get(hex)?.aircraft;
@@ -3749,30 +3765,30 @@ async function drawRegTrack(hex, fit) {
   // a dot every 5 seconds along the path (the server keeps a point that often): hover for its speed, altitude and time, and every sixth one (30 s) is labelled
   rgDots = [];
   pts.forEach((q, i) => {
-    if (i === 0 || i === pts.length - 1) return;
-    const txt = `${q[4] != null ? esc(speedTxt(q[4])) + ' · ' : ''}${esc(fmtAlt(q[2]))}${q[3] ? ' · ' + timeOf(q[3]) : ''}`;
-    rgDots.push({ dot: L.circleMarker([q[0], q[1]], { radius: 3, color: '#0b1020', weight: 1, fillColor: altColor(q[2]), fillOpacity: 1 }).addTo(rgLayers), txt });
+    if (i === 0 || i === pts.length - 1 || (pts.length - 1 - i) % 4) return; // a dot about every 4th point (roughly every half minute), counting back from the plane
+    const base = `${q[4] != null ? esc(speedTxt(q[4])) + ' · ' : ''}${esc(fmtAlt(q[2]))}`;
+    rgDots.push({ dot: L.circleMarker([q[0], q[1]], { radius: 4, color: '#0b1020', weight: 1, fillColor: altColor(q[2]), fillOpacity: 1 }).addTo(rgLayers), txt: base, full: base + (q[3] ? ' · ' + timeOf(q[3]) : '') });
   });
   const first = pts[0];
   labelRegDots();
   L.circleMarker([first[0], first[1]], { radius: 5, color: '#fff', weight: 2, fillColor: altColor(first[2]), fillOpacity: 1 })
     .bindTooltip(`First seen${first[3] ? ' ' + timeOf(first[3]) : ''} · ${fmtAlt(first[2])}`).addTo(rgLayers);
   const now = a ? [a.lat, a.lon] : [pts[pts.length - 1][0], pts[pts.length - 1][1]];
-  L.marker(now, { icon: L.divIcon({ className: '', html: `<div style="position:relative">${aircraftSvg(a, a ? altColor(a.alt) : '#cfd6e6', a?.track || 0)}${a?.gs != null ? `<span class="rg-spd">${esc(speedTxt(a.gs))}</span>` : ''}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }) }).addTo(rgLayers);
+  L.marker(now, { zIndexOffset: 1000, icon: L.divIcon({ className: '', html: `<div style="position:relative">${aircraftSvg(a, a ? altColor(a.alt) : '#cfd6e6', a?.track || 0)}${a?.gs != null ? `<span class="rg-spd">${esc(speedTxt(a.gs))}</span>` : ''}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }) }).addTo(rgLayers);
   if (fit) { rgMap.fitBounds(L.latLngBounds(pts.map(p => [p[0], p[1]]).concat([now])).pad(0.2), { maxZoom: 13, animate: false }); rgMap.setZoom(rgMap.getZoom() - 0.32, { animate: false }); } // then 20% further out (a factor of 0.8 is 0.32 of a zoom step)
   const mins = first[3] ? Math.round((Date.now() - first[3]) / 60000) : null;
   $('rgCap').textContent = `${mins != null ? `LAST ${mins} MIN · ` : ''}${pts.length} PTS${a ? '' : ' · OUT OF RANGE'}`;
 }
-// The 5-second dots show their speed, altitude and time on the map itself. Labels that would sit on top of each other are
-// left out (the dot still shows them on hover), and the choice is made again each time the map is zoomed.
+// The dots along the path (about one every half minute) show their speed and altitude on the map itself. A label only appears where
+// there is room (at least ~120 px from the last one); every dot shows its reading, with the time, on hover. Redone on each zoom.
 let rgDots = [];
 function labelRegDots() {
   if (!rgMap) return;
   let lastP = null, side = 0;
   for (const d of rgDots) {
-    const p = rgMap.latLngToContainerPoint(d.dot.getLatLng()), show = !lastP || Math.hypot(p.x - lastP.x, p.y - lastP.y) >= 44;
+    const p = rgMap.latLngToContainerPoint(d.dot.getLatLng()), show = !lastP || Math.hypot(p.x - lastP.x, p.y - lastP.y) >= 120;
     d.dot.unbindTooltip();
-    d.dot.bindTooltip(d.txt, { permanent: show, direction: side++ % 2 ? 'left' : 'right', offset: [side % 2 ? -6 : 6, 0], className: 'crumb-tip' });
+    d.dot.bindTooltip(show ? d.txt : d.full, { permanent: show, direction: side++ % 2 ? 'left' : 'right', offset: [side % 2 ? -6 : 6, 0], className: 'crumb-tip' });
     if (show) lastP = p;
   }
 }
